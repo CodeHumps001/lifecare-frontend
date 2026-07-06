@@ -14,6 +14,55 @@ import {
 import { postsAPI } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
+// Helper function to format content intelligently
+const formatContent = (content: string): string[] => {
+  if (!content) return [];
+
+  // First, try to split by double newlines (existing paragraph breaks)
+  let paragraphs = content.split(/\n\n+/);
+
+  // If the content is one big block (no paragraph breaks),
+  // intelligently split it into readable paragraphs
+  if (paragraphs.length === 1) {
+    const text = paragraphs[0];
+
+    // Split by single newlines first
+    const lines = text.split(/\n/).filter((line) => line.trim());
+
+    if (lines.length > 1) {
+      // If we have multiple lines after splitting by \n, use those
+      return lines.map((line) => line.trim());
+    } else {
+      // If it's still one big block, split into sentences and group them
+      const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+      const formattedParagraphs: string[] = [];
+      let currentParagraph = "";
+
+      sentences.forEach((sentence, index) => {
+        currentParagraph += sentence.trim() + " ";
+
+        // Create a new paragraph every 3-4 sentences or when the paragraph gets long
+        if ((index + 1) % 3 === 0 || currentParagraph.length > 400) {
+          formattedParagraphs.push(currentParagraph.trim());
+          currentParagraph = "";
+        }
+      });
+
+      // Add any remaining sentences
+      if (currentParagraph.trim()) {
+        formattedParagraphs.push(currentParagraph.trim());
+      }
+
+      return formattedParagraphs.length > 0 ? formattedParagraphs : [text];
+    }
+  }
+
+  // Clean up paragraphs
+  return paragraphs
+    .map((p) => p.replace(/\n/g, " ").trim())
+    .filter((p) => p.length > 0);
+};
+
 export default function BlogPostPage({ params }: { params: { id: string } }) {
   const [post, setPost] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -86,6 +135,9 @@ export default function BlogPostPage({ params }: { params: { id: string } }) {
     );
   }
 
+  // Format the content
+  const formattedParagraphs = formatContent(post.content);
+
   return (
     <div className="bg-slate-50 text-slate-800 antialiased min-h-screen pb-24">
       {/* ── STICKY BACK/ACTION NAVIGATION ────────────────── */}
@@ -151,7 +203,7 @@ export default function BlogPostPage({ params }: { params: { id: string } }) {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Main Copy Content */}
           <article className="lg:col-span-12 prose prose-slate max-w-none prose-p:leading-relaxed prose-p:text-slate-600 prose-p:text-base sm:prose-p:text-lg">
-            {post.content.split("\n\n").map((paragraph: string, i: number) => (
+            {formattedParagraphs.map((paragraph: string, i: number) => (
               <p key={i} className="mb-6 font-normal">
                 {paragraph}
               </p>
