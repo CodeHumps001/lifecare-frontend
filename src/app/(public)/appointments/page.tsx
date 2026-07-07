@@ -171,7 +171,7 @@ export default function AppointmentsPage() {
               href="tel:+233558484862"
               className="text-emerald-400 font-semibold hover:underline underline-offset-4"
             >
-              +233 55 848 4862
+              +233 50 181 2304
             </a>
           </p>
         </div>
@@ -554,10 +554,10 @@ export default function AppointmentsPage() {
           <p className="text-slate-400 text-sm">
             Need processing support?{" "}
             <a
-              href="tel:+233558484862"
+              href="tel:+233501812304"
               className="text-slate-800 font-bold hover:underline underline-offset-4"
             >
-              Call Hotline +233 55 848 4862
+              Call Hotline +233 50 181 2304
             </a>
           </p>
         </div>

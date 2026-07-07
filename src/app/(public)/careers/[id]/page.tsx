@@ -356,10 +356,10 @@ export default function JobApplicationPage({
                 routing your data? Message our operations wing directly.
               </p>
               <a
-                href="mailto:andrewdarkwah123@gmail.com"
+                href="mailto:divinenetcarehsp@gmail.com"
                 className="block text-emerald-700 font-bold text-xs hover:underline pt-1"
               >
-                andrewdarkwah123@gmail.com
+                divinenetcarehsp@gmail.com
               </a>
             </div>
           </aside>

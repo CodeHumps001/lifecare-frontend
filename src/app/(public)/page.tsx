@@ -247,7 +247,7 @@ export default function HomePage() {
                 Book Appointment
               </Link>
               <a
-                href="tel:+233558484862"
+                href="tel:+233501812304"
                 className="inline-flex items-center justify-center gap-2 bg-slate-50 hover:bg-slate-100 text-slate-800 font-semibold px-6 py-3.5 rounded-xl border border-slate-200 shadow-sm transition-all duration-250 text-sm"
               >
                 <Phone className="w-4 h-4 text-emerald-600" />
@@ -330,7 +330,7 @@ export default function HomePage() {
             {
               icon: Phone,
               label: "Emergency Call",
-              href: "tel:+233558484862",
+              href: "tel:+233501812304",
               grad: "from-rose-600 to-rose-700 text-white",
             },
             {
@@ -467,7 +467,7 @@ export default function HomePage() {
                 Book Online Now
               </Link>
               <a
-                href="tel:+233558484862"
+                href="tel:+233501812304"
                 className="inline-flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-white font-semibold px-5 py-3 rounded-lg border border-white/10 backdrop-blur-sm transition-colors text-xs"
               >
                 <Phone className="w-3.5 h-3.5 text-emerald-400" />
@@ -605,7 +605,7 @@ export default function HomePage() {
                 {
                   icon: Phone,
                   label: "Phone Contact",
-                  value: "+233 55 848 4862",
+                  value: "+233 50 181 2304",
                 },
                 {
                   icon: Clock,
@@ -628,31 +628,31 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="lg:col-span-7 rounded-xl overflow-hidden border border-slate-200 h-64 bg-slate-200 relative w-full max-w-[480px] lg:max-w-none mx-auto">
-            <Image
-              src="https://images.unsplash.com/photo-1524661135-423995f22d0b?w=700&h=400&fit=crop"
-              alt="Kumasi map grid wrapper"
-              fill
-              sizes="(max-w-7xl) 50vw, 100vw"
-              className="object-cover opacity-30 mix-blend-multiply"
+          <div className="lg:col-span-7 rounded-xl overflow-hidden border border-slate-200 h-64 bg-slate-200 relative w-full max-w-[450px] lg:max-w-none mx-auto group">
+            <iframe
+              title="Divine Netcare Hospital Verified Location View"
+              src="https://maps.google.com/maps?q=Divine%20Netcare%20Hospital,%20Kumasi,%20Ghana&t=&z=15&ie=UTF8&iwloc=&output=embed"
+              className="w-full h-full border-0 object-cover"
+              allowFullScreen={true}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
             />
-            <div className="absolute inset-0 flex items-center justify-center p-4">
-              <a
-                href="https://maps.google.com/?q=Divine+Netcare+Hospital+Kumasi"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-white/95 rounded-xl p-4 shadow-md border border-slate-100 text-center max-w-[260px] w-full"
-              >
-                <MapPin className="w-4 h-4 text-emerald-600 mx-auto mb-1.5" />
-                <p className="font-extrabold text-slate-900 text-xs sm:text-sm">
+            <div className="absolute bottom-4 left-4 right-4 bg-white/95 backdrop-blur-md border border-slate-200/60 p-3 rounded-xl flex items-center justify-between shadow-md pointer-events-none group-hover:bg-white transition-colors duration-300">
+              <div className="space-y-0.5">
+                <p className="font-extrabold text-slate-950 text-xs tracking-tight">
                   Divine Netcare Hospital
                 </p>
-                <p className="text-slate-500 text-[10px] mt-0.5">
-                  Kronum-Abouhia, Kumasi
+                <p className="text-slate-500 text-[11px] font-normal">
+                  Afrancho-Buoho, Off Offinso Rd
                 </p>
-                <p className="text-emerald-600 text-[11px] font-bold mt-2 inline-flex items-center gap-1">
-                  Launch Google Maps <ArrowRight className="w-3 h-3" />
-                </p>
+              </div>
+              <a
+                href="https://maps.app.goo.gl/wd5U7mHUN3RW14US6"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-slate-950 text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg pointer-events-auto shadow-sm hover:bg-emerald-700 transition-colors"
+              >
+                Get Route
               </a>
             </div>
           </div>

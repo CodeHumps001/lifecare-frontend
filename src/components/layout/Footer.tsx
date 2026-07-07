@@ -145,11 +145,11 @@ export default function Footer() {
               </li>
               <li>
                 <a
-                  href="tel:+233558484862"
+                  href="tel:+233501812304"
                   className="flex items-center gap-3 text-slate-400 hover:text-emerald-400 text-sm font-semibold transition-colors group"
                 >
                   <Phone className="w-4 h-4 text-emerald-400 flex-shrink-0 group-hover:scale-110 transition-transform" />
-                  +233 55 848 4862
+                  +233 50 181 2304
                 </a>
               </li>
               <li>
@@ -158,7 +158,7 @@ export default function Footer() {
                   className="flex items-center gap-3 text-slate-400 hover:text-emerald-400 text-sm font-medium transition-colors"
                 >
                   <Mail className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  andrewdarkwah123@gmail.com
+                  divinenetcarehsp@gmail.com
                 </a>
               </li>
               <li className="flex items-start gap-3 pt-2 border-t border-slate-900">
@@ -190,7 +190,7 @@ export default function Footer() {
             </p>
           </div>
           <a
-            href="tel:+233558484862"
+            href="tel:+233501812304"
             className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs tracking-wider uppercase px-6 py-3.5 rounded-xl transition-all duration-150 whitespace-nowrap shadow-sm shadow-red-950"
           >
             <Phone className="w-4 h-4 animate-pulse" />
@@ -206,8 +206,8 @@ export default function Footer() {
           </p>
           <p className="text-slate-500 text-xs font-bold tracking-wide flex items-center gap-1.5">
             Built with{" "}
-            <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" /> by
-            LifeCare HMS
+            <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" /> by Fosu
+            Yaw
           </p>
           <div className="flex items-center gap-5">
             <Link

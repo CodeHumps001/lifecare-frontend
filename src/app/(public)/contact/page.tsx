@@ -42,16 +42,16 @@ export default function ContactPage() {
     {
       icon: Phone,
       title: "Hotline Desk",
-      lines: ["+233 54 150 4824"],
-      action: { href: "tel:+233541504824", label: "Call Emergency Line" },
+      lines: ["+233 50 181 2304"],
+      action: { href: "tel:+233501812304", label: "Call Emergency Line" },
       badgeColor: "bg-emerald-50 text-emerald-700 border-emerald-100",
     },
     {
       icon: Mail,
       title: "Digital Inquiries",
-      lines: ["andrewdarkwah123@gmail.com"],
+      lines: ["divinenetcarehsp@gmail.com"],
       action: {
-        href: "mailto:andrewdarkwah123@gmail.com",
+        href: "mailto:divinenetcarehsp@gmail.com",
         label: "Open Mailer",
       },
       badgeColor: "bg-blue-50 text-blue-700 border-blue-100",
@@ -59,7 +59,7 @@ export default function ContactPage() {
     {
       icon: MapPin,
       title: "Hospital Location",
-      lines: ["Ntiri-Buoho / Afrancho", "Afigya Kwabre South, Ashanti Region"],
+      lines: ["Kronum-Abouhia, Kumasi", "Afigya Kwabre South, Ashanti Region"],
       action: {
         href: "https://maps.app.goo.gl/wd5U7mHUN3RW14US6",
         label: "Open Google Maps",
@@ -118,7 +118,7 @@ export default function ContactPage() {
             />
             <div className="absolute bottom-6 left-6 right-6 z-20 bg-slate-900/80 backdrop-blur-md border border-slate-700/50 p-4 rounded-2xl">
               <p className="text-white text-xs font-bold uppercase tracking-wider">
-                Afrancho-Buoho Campus
+                Kronum-Abuohia
               </p>
               <p className="text-slate-400 text-[11px] font-normal mt-0.5">
                 Comprehensive, certified local healthcare infrastructure.
@@ -235,7 +235,7 @@ export default function ContactPage() {
                       {...register("phone")}
                       type="tel"
                       className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 text-sm font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 transition-all"
-                      placeholder="e.g., +233 54 150 4824"
+                      placeholder="e.g., +233 50 181 2304"
                     />
                   </div>
                 </div>

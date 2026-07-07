@@ -251,7 +251,7 @@ export default function BlogPostPage({ params }: { params: { id: string } }) {
                 Book Appointment
               </Link>
               <a
-                href="tel:+233558484862"
+                href="tel:+233501812304"
                 className="w-full sm:w-auto text-center inline-flex items-center justify-center gap-2 bg-white/10 text-white border border-white/10 hover:bg-white/20 text-sm font-bold tracking-wide px-5 py-3.5 rounded-xl transition-all"
               >
                 <Phone className="w-4 h-4 text-emerald-400" /> Call Direct Line

@@ -57,7 +57,7 @@ export default function Navbar() {
               className="flex items-center gap-1.5 text-slate-200 hover:text-emerald-400 font-semibold transition-colors"
             >
               <Phone className="w-3.5 h-3.5" />
-              +233 55 848 4862
+              +233 50 181 2304
             </a>
             <span className="text-slate-800">|</span>
             <Link
@@ -78,7 +78,7 @@ export default function Navbar() {
             : "bg-white border-b border-slate-100 py-4"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4  flex items-center justify-between">
           {/* Unified Graphical Logo Anchor */}
           <Link
             href="/"
@@ -88,8 +88,8 @@ export default function Navbar() {
               src="/logo.jpeg"
               alt="Divine Netcare Hospital"
               width={160}
-              height={50}
-              className="h-9 sm:h-11 w-auto object-contain"
+              height={60}
+              className="h-300 sm:h-11 w-auto object-contain"
               priority
             />
           </Link>
@@ -140,7 +140,7 @@ export default function Navbar() {
           {/* Call to Action Buffer */}
           <div className="hidden lg:flex items-center gap-4">
             <a
-              href="tel:+233558484862"
+              href="tel:+233501812304"
               className="flex items-center gap-1.5 text-red-600 font-extrabold text-xs tracking-wider uppercase hover:text-red-700 transition-colors"
             >
               <Phone className="w-3.5 h-3.5 animate-pulse" />
@@ -199,7 +199,7 @@ export default function Navbar() {
 
             <div className="pt-4 mt-2 border-t border-slate-200/80 space-y-2.5">
               <a
-                href="tel:+233558484862"
+                href="tel:+233501812304"
                 className="flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-red-50 text-red-700 font-extrabold text-xs tracking-wider uppercase"
               >
                 <Phone className="w-4 h-4" />
