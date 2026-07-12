@@ -1,5 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { Inter } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -19,7 +27,7 @@ export const metadata: Metadata = {
     "Laboratory services Kumasi",
   ],
   authors: [{ name: "Divine Netcare Hospital" }],
-  metadataBase: new URL("https://divinenetcarehospital.com"), // Replace with your production domain name
+  metadataBase: new URL("https://divinenetcarehospital.com"),
   alternates: {
     canonical: "/",
   },
@@ -77,7 +85,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={cn("font-sans", inter.variable)}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link

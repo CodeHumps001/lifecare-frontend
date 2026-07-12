@@ -1,269 +1,475 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import * as Dialog from "@radix-ui/react-dialog";
-import * as Tabs from "@radix-ui/react-tabs";
-import * as Select from "@radix-ui/react-select";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, Briefcase, ExternalLink } from "lucide-react";
+import { PageHeader } from "@/components/shared/page-header";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Briefcase,
-  Plus,
-  X,
-  CheckCircle,
-  Users,
-  Trash2,
-  ChevronDown,
-  ChevronUp,
-  ToggleLeft,
-  ToggleRight,
-  AlertTriangle,
-} from "lucide-react";
-import { jobsAPI, departmentsAPI } from "@/lib/api";
-import { formatDate } from "@/lib/utils";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { jobsApi, ApiError } from "@/lib/api";
+import type { JobListingPayload } from "@/lib/api";
+import type {
+  ApplicationStatus,
+  JobApplication,
+  JobListing,
+  JobType,
+} from "@/lib/types";
+import { formatDate, titleCase } from "@/lib/utils";
 
-const jobTypes = ["FULL_TIME", "PART_TIME", "INTERNSHIP", "CONTRACT"];
-const appStatusOptions = ["PENDING", "REVIEWED", "SHORTLISTED", "REJECTED"];
+const JOB_TYPES: JobType[] = [
+  "FULL_TIME",
+  "PART_TIME",
+  "INTERNSHIP",
+  "CONTRACT",
+];
+const APPLICATION_STATUSES: ApplicationStatus[] = [
+  "PENDING",
+  "REVIEWED",
+  "SHORTLISTED",
+  "REJECTED",
+];
 
-export default function AdminJobsPage() {
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [applications, setApplications] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
+const emptyForm: JobListingPayload = {
+  title: "",
+  department: "",
+  type: "FULL_TIME",
+  description: "",
+};
+
+export default function JobsPage() {
+  return (
+    <div>
+      <PageHeader
+        title="Careers"
+        description="Manage job listings and review applications."
+      />
+      <Tabs defaultValue="listings">
+        <TabsList>
+          <TabsTrigger value="listings">Listings</TabsTrigger>
+          <TabsTrigger value="applications">Applications</TabsTrigger>
+        </TabsList>
+        <TabsContent value="listings" className="mt-4">
+          <ListingsTab />
+        </TabsContent>
+        <TabsContent value="applications" className="mt-4">
+          <ApplicationsTab />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function ListingsTab() {
+  const [jobs, setJobs] = useState<JobListing[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [expandedJob, setExpandedJob] = useState<string | null>(null);
-  const [success, setSuccess] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<JobListing | null>(null);
+  const [form, setForm] = useState<JobListingPayload>(emptyForm);
+  const [saving, setSaving] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm();
-
-  const load = () => {
+  const load = async () => {
     setLoading(true);
-    Promise.allSettled([
-      jobsAPI.getAll(),
-      jobsAPI.getApplications(),
-      departmentsAPI.getAll(),
-    ])
-      .then(([j, a, d]) => {
-        if (j.status === "fulfilled") setJobs(j.value.data.data);
-        if (a.status === "fulfilled") setApplications(a.value.data.data);
-        if (d.status === "fulfilled") setDepartments(d.value.data.data);
-      })
-      .finally(() => setLoading(false));
+    try {
+      setJobs(await jobsApi.list());
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to load job listings",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     load();
   }, []);
 
-  const onSubmit = async (data: any) => {
+  const openCreate = () => {
+    setEditing(null);
+    setForm(emptyForm);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (job: JobListing) => {
+    setEditing(job);
+    setForm({
+      title: job.title,
+      department: job.department,
+      type: job.type,
+      description: job.description,
+      isOpen: job.isOpen,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.title || !form.department || !form.description) {
+      toast.error("Title, department and description are required");
+      return;
+    }
+    setSaving(true);
     try {
-      await jobsAPI.create(data);
-      setSuccess("Job listing created successfully");
-      reset();
-      setShowForm(false);
+      if (editing) {
+        await jobsApi.update(editing.id, form);
+        toast.success("Job listing updated");
+      } else {
+        await jobsApi.create(form);
+        toast.success("Job listing created");
+      }
+      setDialogOpen(false);
       load();
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to create listing");
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to save job listing",
+      );
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleToggle = async (job: any) => {
+  const handleToggleOpen = async (job: JobListing) => {
     try {
-      await jobsAPI.update(job.id, { isOpen: !job.isOpen });
-      load();
-    } catch {}
+      await jobsApi.update(job.id, { isOpen: !job.isOpen });
+      setJobs((prev) =>
+        prev.map((j) => (j.id === job.id ? { ...j, isOpen: !j.isOpen } : j)),
+      );
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to update listing",
+      );
+    }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this job listing?")) return;
     try {
-      await jobsAPI.delete(id);
+      await jobsApi.remove(id);
+      toast.success("Job listing deleted");
       load();
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Cannot delete");
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to delete listing",
+      );
     }
   };
 
-  const handleAppStatus = async (id: string, status: string) => {
+  return (
+    <div>
+      <div className="mb-4 flex justify-end">
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger>
+            <Button onClick={openCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              New Listing
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>
+                {editing ? "Edit Job Listing" : "New Job Listing"}
+              </DialogTitle>
+              <DialogDescription>
+                Published listings appear on the public careers page.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={form.title}
+                    onChange={(e) =>
+                      setForm({ ...form, title: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Department</Label>
+                  <Input
+                    value={form.department}
+                    onChange={(e) =>
+                      setForm({ ...form, department: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Type</Label>
+                <Select
+                  value={form.type}
+                  onValueChange={(v) =>
+                    v && setForm({ ...form, type: v as JobType })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {JOB_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {titleCase(t)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Textarea
+                  rows={5}
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm({ ...form, description: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="space-y-3 p-6">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : jobs.length === 0 ? (
+            <div className="p-6">
+              <EmptyState
+                icon={Briefcase}
+                title="No job listings yet"
+                description="Create your first listing above."
+              />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Department</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Posted</TableHead>
+                  <TableHead>Open</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {jobs.map((job) => (
+                  <TableRow key={job.id}>
+                    <TableCell className="font-medium">{job.title}</TableCell>
+                    <TableCell>{job.department}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{titleCase(job.type)}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDate(job.createdAt)}
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={job.isOpen}
+                        onCheckedChange={() => handleToggleOpen(job)}
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEdit(job)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <ConfirmDialog
+                        trigger={
+                          <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        }
+                        title={`Delete ${job.title}?`}
+                        description="This cannot be undone."
+                        confirmLabel="Delete"
+                        onConfirm={() => handleDelete(job.id)}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ApplicationsTab() {
+  const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const load = async () => {
+    setLoading(true);
     try {
-      await jobsAPI.updateApplication(id, status);
-      load();
-    } catch {}
+      setApplications(await jobsApi.applications.list());
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to load applications",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  const handleStatusChange = async (id: string, status: ApplicationStatus) => {
+    setUpdatingId(id);
+    try {
+      await jobsApi.applications.updateStatus(id, status);
+      setApplications((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, status } : a)),
+      );
+      if (status === "SHORTLISTED" || status === "REJECTED") {
+        toast.success("Status updated — applicant notified by SMS/email");
+      } else {
+        toast.success("Status updated");
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to update status",
+      );
+    } finally {
+      setUpdatingId(null);
+    }
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">
-            Jobs & Recruitment
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            {jobs.length} listings · {applications.length} applications
-          </p>
-        </div>
-
-        <Dialog.Root open={showForm} onOpenChange={setShowForm}>
-          <Dialog.Trigger asChild>
-            <button className="bg-emerald-600 text-white px-4 py-2 rounded-2xl flex items-center gap-2 text-sm font-semibold hover:bg-emerald-700 transition-all">
-              <Plus className="w-4 h-4" /> Post Job
-            </button>
-          </Dialog.Trigger>
-          <Dialog.Portal>
-            <Dialog.Overlay className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50" />
-            <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-3xl p-8 w-full max-w-lg z-50 shadow-2xl">
-              <div className="flex justify-between items-center mb-6">
-                <Dialog.Title className="text-xl font-bold">
-                  Post Job Listing
-                </Dialog.Title>
-                <Dialog.Close>
-                  <X className="w-5 h-5 text-gray-400" />
-                </Dialog.Close>
-              </div>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                <input
-                  {...register("title", { required: true })}
-                  placeholder="Job Title"
-                  className="w-full border rounded-xl p-3"
-                />
-                <select
-                  {...register("department", { required: true })}
-                  className="w-full border rounded-xl p-3"
-                >
-                  <option value="">Select Department</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.name}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  {...register("type", { required: true })}
-                  className="w-full border rounded-xl p-3"
-                >
-                  {jobTypes.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-                <textarea
-                  {...register("description", { required: true })}
-                  placeholder="Description"
-                  className="w-full border rounded-xl p-3 h-24"
-                />
-                <button
-                  type="submit"
-                  className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold"
-                >
-                  Post Listing
-                </button>
-              </form>
-            </Dialog.Content>
-          </Dialog.Portal>
-        </Dialog.Root>
-      </div>
-
-      <Tabs.Root defaultValue="listings">
-        <Tabs.List className="flex gap-4 border-b border-gray-100 mb-6">
-          {["listings", "applications"].map((t) => (
-            <Tabs.Trigger
-              key={t}
-              value={t}
-              className="px-2 py-3 text-sm font-bold capitalize text-gray-400 data-[state=active]:text-emerald-600 data-[state=active]:border-b-2 border-emerald-600"
-            >
-              {t}
-            </Tabs.Trigger>
-          ))}
-        </Tabs.List>
-
-        <Tabs.Content value="listings" className="space-y-4">
-          {jobs.map((job) => (
-            <div
-              key={job.id}
-              className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm flex items-center justify-between"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
-                  <Briefcase className="w-6 h-6 text-emerald-600" />
-                </div>
-                <div>
-                  <h3 className="font-bold">{job.title}</h3>
-                  <p className="text-xs text-gray-400">
-                    {job.department} • {job.type}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <button onClick={() => handleToggle(job)}>
-                  {job.isOpen ? (
-                    <ToggleRight className="text-emerald-600 w-6 h-6" />
-                  ) : (
-                    <ToggleLeft className="text-gray-300 w-6 h-6" />
-                  )}
-                </button>
-                <button onClick={() => handleDelete(job.id)}>
-                  <Trash2 className="w-5 h-5 text-gray-400 hover:text-red-500" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </Tabs.Content>
-
-        <Tabs.Content value="applications">
-          <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-400 uppercase text-xs">
-                <tr>
-                  <th className="px-6 py-4">Applicant</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {applications.map((app) => (
-                  <tr key={app.id}>
-                    <td className="px-6 py-4 font-medium">{app.name}</td>
-                    <td className="px-6 py-4">
-                      <span className="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[10px] font-bold uppercase">
-                        {app.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <Select.Root
-                        defaultValue={app.status}
-                        onValueChange={(s) => handleAppStatus(app.id, s)}
-                      >
-                        <Select.Trigger className="text-emerald-600 font-semibold flex items-center gap-1">
-                          <Select.Value />
-                          <ChevronDown className="w-4 h-4" />
-                        </Select.Trigger>
-                        <Select.Portal>
-                          <Select.Content className="bg-white border rounded-xl shadow-lg p-2">
-                            {appStatusOptions.map((s) => (
-                              <Select.Item
-                                key={s}
-                                value={s}
-                                className="px-4 py-2 hover:bg-emerald-50 cursor-pointer"
-                              >
-                                {s}
-                              </Select.Item>
-                            ))}
-                          </Select.Content>
-                        </Select.Portal>
-                      </Select.Root>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+    <Card>
+      <CardContent className="p-0">
+        {loading ? (
+          <div className="space-y-3 p-6">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
           </div>
-        </Tabs.Content>
-      </Tabs.Root>
-    </div>
+        ) : applications.length === 0 ? (
+          <div className="p-6">
+            <EmptyState
+              icon={Briefcase}
+              title="No applications yet"
+              description="Applications submitted from the careers page will appear here."
+            />
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Applicant</TableHead>
+                <TableHead>Position</TableHead>
+                <TableHead>CV</TableHead>
+                <TableHead>Applied</TableHead>
+                <TableHead className="text-right">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {applications.map((app) => (
+                <TableRow key={app.id}>
+                  <TableCell>
+                    <p className="font-medium">{app.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {app.email} · {app.phone}
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    <p className="text-sm">{app.jobListing?.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {app.jobListing?.department}
+                    </p>
+                  </TableCell>
+                  <TableCell>
+                    <a
+                      href={app.cvUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-sm text-primary hover:underline"
+                    >
+                      View <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatDate(app.createdAt)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Select
+                      value={app.status}
+                      onValueChange={(v) =>
+                        v && handleStatusChange(app.id, v as ApplicationStatus)
+                      }
+                      disabled={updatingId === app.id}
+                    >
+                      <SelectTrigger className="ml-auto w-36">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {APPLICATION_STATUSES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {titleCase(s)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   );
 }

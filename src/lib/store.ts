@@ -1,55 +1,60 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type { Role, Position } from "./types";
 
-interface User {
+export interface SessionUser {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
-  role: "SUPER_ADMIN" | "DEPT_HEAD" | "STAFF";
-  position: string;
+  role: Role;
+  position: Position | null;
   departmentId: string | null;
 }
 
-interface AuthStore {
-  user: User | null;
+interface AuthState {
   token: string | null;
+  user: SessionUser | null;
   isAuthenticated: boolean;
-  login: (user: User, token: string) => void;
+  setSession: (token: string, user: SessionUser) => void;
   logout: () => void;
-  hydrate: () => void;
 }
 
-export const useAuthStore = create<AuthStore>((set) => ({
-  user: null,
-  token: null,
-  isAuthenticated: false,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set) => ({
+      token: null,
+      user: null,
+      isAuthenticated: false,
+      setSession: (token, user) => set({ token, user, isAuthenticated: true }),
+      logout: () => set({ token: null, user: null, isAuthenticated: false }),
+    }),
+    {
+      name: "lifecare-admin-auth",
+    },
+  ),
+);
 
-  login: (user, token) => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("lifecare_token", token);
-      localStorage.setItem("lifecare_user", JSON.stringify(user));
-    }
-    set({ user, token, isAuthenticated: true });
-  },
+// Non-hook accessor — used by lib/api.ts outside React components
+export function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return useAuthStore.getState().token;
+}
 
-  logout: () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("lifecare_token");
-      localStorage.removeItem("lifecare_user");
-    }
-    set({ user: null, token: null, isAuthenticated: false });
-  },
+export function clearSession() {
+  useAuthStore.getState().logout();
+}
 
-  hydrate: () => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("lifecare_token");
-      const userStr = localStorage.getItem("lifecare_user");
-      if (token && userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          set({ user, token, isAuthenticated: true });
-        } catch {}
-      }
-    }
-  },
+// ─── UI store: sidebar collapse state on mobile ────────────────────────
+
+interface UIState {
+  sidebarOpen: boolean;
+  setSidebarOpen: (open: boolean) => void;
+  toggleSidebar: () => void;
+}
+
+export const useUIStore = create<UIState>((set, get) => ({
+  sidebarOpen: false,
+  setSidebarOpen: (open) => set({ sidebarOpen: open }),
+  toggleSidebar: () => set({ sidebarOpen: !get().sidebarOpen }),
 }));

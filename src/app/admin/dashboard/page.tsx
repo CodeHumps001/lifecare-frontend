@@ -1,210 +1,151 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Users,
   Building2,
-  Calendar,
-  Clock,
-  FileText,
-  Briefcase,
+  CalendarCheck2,
+  ClipboardList,
   Star,
-  TrendingUp,
-  Bell,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  ShieldCheck,
+  Briefcase,
+  ArrowRight,
 } from "lucide-react";
-import {
-  departmentsAPI,
-  usersAPI,
-  appointmentsAPI,
-  jobsAPI,
-  reviewsAPI,
-  leaveAPI,
-} from "@/lib/api";
-import { useAuthStore } from "@/lib/store";
+import { PageHeader } from "@/components/shared/page-header";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { formatDate } from "@/lib/utils";
+import { useAuthStore } from "@/lib/store";
+import {
+  usersApi,
+  departmentsApi,
+  appointmentsApi,
+  reviewsApi,
+  jobsApi,
+} from "@/lib/api";
+import type { Appointment, Review } from "@/lib/types";
 
-export default function AdminDashboard() {
+interface Stats {
+  staffCount: number;
+  departmentCount: number;
+  pendingAppointments: number;
+  pendingReviews: number;
+  openJobs: number;
+  pendingApplications: number;
+}
+
+export default function DashboardPage() {
   const { user } = useAuthStore();
-  const [stats, setStats] = useState({
-    users: 0,
-    departments: 0,
-    appointments: 0,
-    pendingLeave: 0,
-    openJobs: 0,
-    pendingReviews: 0,
-  });
-  const [recentAppointments, setRecentAppointments] = useState<any[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [recentAppointments, setRecentAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.allSettled([
-      usersAPI.getAll(),
-      departmentsAPI.getAll(),
-      appointmentsAPI.getAll(),
-      jobsAPI.getAll(),
-      reviewsAPI.getApproved(),
-      leaveAPI.getDepartmentLeave(),
-    ])
-      .then(([users, depts, appts, jobs, reviews, leave]) => {
+    const load = async () => {
+      try {
+        const isSuperAdmin = user?.role === "SUPER_ADMIN";
+
+        const [staff, departments, appointments, reviews, jobs, applications] = await Promise.all([
+          isSuperAdmin ? usersApi.list() : Promise.resolve([]),
+          departmentsApi.list(),
+          isSuperAdmin ? appointmentsApi.list() : Promise.resolve([]),
+          isSuperAdmin ? reviewsApi.listApproved() : Promise.resolve([]),
+          isSuperAdmin ? jobsApi.list() : Promise.resolve([]),
+          isSuperAdmin ? jobsApi.applications.list() : Promise.resolve([]),
+        ]);
+
         setStats({
-          users:
-            users.status === "fulfilled" ? users.value.data.data.length : 0,
-          departments:
-            depts.status === "fulfilled" ? depts.value.data.data.length : 0,
-          appointments:
-            appts.status === "fulfilled" ? appts.value.data.data.length : 0,
-          openJobs:
-            jobs.status === "fulfilled" ? jobs.value.data.data.length : 0,
-          pendingReviews: 0,
-          pendingLeave:
-            leave.status === "fulfilled"
-              ? leave.value.data.data.filter((l: any) => l.status === "PENDING")
-                  .length
-              : 0,
+          staffCount: staff.length,
+          departmentCount: departments.length,
+          pendingAppointments: appointments.filter((a) => a.status === "PENDING").length,
+          pendingReviews: reviews.filter((r) => r.status === "PENDING").length,
+          openJobs: jobs.filter((j) => j.isOpen).length,
+          pendingApplications: applications.filter((a) => a.status === "PENDING").length,
         });
-        if (appts.status === "fulfilled") {
-          setRecentAppointments(appts.value.data.data.slice(0, 5));
-        }
-      })
-      .finally(() => setLoading(false));
-  }, []);
+        setRecentAppointments(appointments.slice(0, 6));
+      } catch {
+        // dashboard is best-effort — individual pages surface their own errors
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [user?.role]);
 
-  const quickActions = [
-    { label: "Staff Directory", href: "/admin/users", icon: Users },
-    { label: "Scheduling", href: "/admin/shifts", icon: Calendar },
-    { label: "Recruitment", href: "/admin/jobs", icon: Briefcase },
-    { label: "Notices", href: "/admin/announcements", icon: Bell },
-    { label: "Insights", href: "/admin/posts", icon: TrendingUp },
-    { label: "Attendance", href: "/admin/attendance", icon: Clock },
-  ];
-
-  const statCards = [
-    {
-      label: "Staff Members",
-      value: stats.users,
-      icon: Users,
-      href: "/admin/users",
-    },
-    {
-      label: "Departments",
-      value: stats.departments,
-      icon: Building2,
-      href: "/admin/departments",
-    },
-    {
-      label: "Scheduled Appointments",
-      value: stats.appointments,
-      icon: Calendar,
-      href: "/admin/appointments",
-    },
-    {
-      label: "Pending Leave",
-      value: stats.pendingLeave,
-      icon: FileText,
-      href: "/admin/leave",
-    },
-    {
-      label: "Open Positions",
-      value: stats.openJobs,
-      icon: Briefcase,
-      href: "/admin/jobs",
-    },
-    {
-      label: "Pending Reviews",
-      value: stats.pendingReviews,
-      icon: Star,
-      href: "/admin/reviews",
-    },
+  const cards = [
+    { label: "Active Staff", value: stats?.staffCount, icon: Users, href: "/admin/users" },
+    { label: "Departments", value: stats?.departmentCount, icon: Building2, href: "/admin/departments" },
+    { label: "Pending Appointments", value: stats?.pendingAppointments, icon: CalendarCheck2, href: "/admin/appointments" },
+    { label: "Pending Reviews", value: stats?.pendingReviews, icon: Star, href: "/admin/reviews" },
+    { label: "Open Job Listings", value: stats?.openJobs, icon: Briefcase, href: "/admin/jobs" },
+    { label: "Pending Applications", value: stats?.pendingApplications, icon: ClipboardList, href: "/admin/jobs" },
   ];
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto space-y-8 pb-10">
-      {/* Header Section */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-brand-dark">Dashboard</h1>
-        <p className="text-gray-500 font-medium">
-          Welcome back, {user?.firstName}. Here is an overview of hospital
-          operations.
-        </p>
-      </div>
+    <div>
+      <PageHeader
+        title={`Welcome back, ${user?.firstName ?? ""}`}
+        description="Here's what's happening at Divine Netcare Hospital today."
+      />
 
-      {/* Operational Tabs */}
-      <nav className="flex items-center gap-2 p-1.5 bg-white border border-gray-200 rounded-xl shadow-sm overflow-x-auto">
-        {quickActions.map((action) => (
-          <Link
-            key={action.label}
-            href={action.href}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-brand-dark hover:bg-gray-50 whitespace-nowrap transition-colors"
-          >
-            <action.icon className="w-4 h-4 text-brand-primary" />
-            {action.label}
-          </Link>
-        ))}
-      </nav>
-
-      {/* Primary Metrics Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-        {statCards.map((stat) => (
-          <Link
-            key={stat.label}
-            href={stat.href}
-            className="bg-white p-5 rounded-2xl border border-gray-200 hover:border-brand-primary transition-all group"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <stat.icon className="w-5 h-5 text-gray-400 group-hover:text-brand-primary" />
-            </div>
-            <div className="text-3xl font-bold text-brand-dark">
-              {loading ? "—" : stat.value}
-            </div>
-            <div className="text-xs font-semibold text-gray-500 mt-1 uppercase tracking-wider">
-              {stat.label}
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      {/* Recent Activity Table */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-bold text-brand-dark">
-            Recent Patient Appointments
-          </h2>
-        </div>
-        {loading ? (
-          <div className="p-8 text-center text-gray-400">
-            Loading records...
-          </div>
-        ) : recentAppointments.length === 0 ? (
-          <div className="p-8 text-center text-gray-400">
-            No recent activity to display.
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {recentAppointments.map((appt) => (
-              <div
-                key={appt.id}
-                className="px-6 py-4 flex items-center justify-between"
-              >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {cards.map((card) => (
+          <Link key={card.label} href={card.href}>
+            <Card className="transition-shadow hover:shadow-md">
+              <CardContent className="flex items-center justify-between p-6">
                 <div>
-                  <p className="font-semibold text-brand-dark">
-                    {appt.patientName}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {appt.patientPhone} • {formatDate(appt.date)}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{card.label}</p>
+                  {loading ? (
+                    <Skeleton className="mt-2 h-8 w-12" />
+                  ) : (
+                    <p className="mt-1 text-3xl font-semibold">{card.value ?? "—"}</p>
+                  )}
                 </div>
-                <div className="text-xs font-bold px-3 py-1 bg-gray-50 rounded-full border border-gray-100 uppercase tracking-wide">
-                  {appt.status}
+                <div className="rounded-full bg-primary/10 p-3">
+                  <card.icon className="h-5 w-5 text-primary" />
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              </CardContent>
+            </Card>
+          </Link>
+        ))}
       </div>
+
+      {user?.role === "SUPER_ADMIN" && (
+        <Card className="mt-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base">Recent Appointments</CardTitle>
+            <Link href="/admin/appointments" className="flex items-center gap-1 text-sm text-primary hover:underline">
+              View all <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            ) : recentAppointments.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">No appointments yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {recentAppointments.map((appt) => (
+                  <div key={appt.id} className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{appt.patientName}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        Dr. {appt.doctor?.firstName} {appt.doctor?.lastName} · {formatDate(appt.date)}
+                      </p>
+                    </div>
+                    <StatusBadge status={appt.status} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

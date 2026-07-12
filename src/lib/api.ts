@@ -1,149 +1,294 @@
-import axios from "axios";
+import { getAuthToken, clearSession } from "./store";
+import type {
+  Announcement,
+  ApiFailure,
+  Appointment,
+  AppointmentStatus,
+  AttendanceRecord,
+  AttendanceStatus,
+  Department,
+  HospitalSettings,
+  JobApplication,
+  JobListing,
+  JobType,
+  LeaveApplication,
+  LeaveStatus,
+  Position,
+  Post,
+  Review,
+  ReviewStatus,
+  Role,
+  Shift,
+  ShiftSwapRequest,
+  ShiftType,
+  SwapStatus,
+  User,
+} from "./types";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api/v1";
 
-export const api = axios.create({
-  baseURL: API_URL,
-  headers: { "Content-Type": "application/json" },
-});
-
-// attach token to every request if available
-api.interceptors.request.use((config) => {
-  if (typeof window !== "undefined") {
-    const token = localStorage.getItem("lifecare_token");
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
   }
-  return config;
-});
+}
 
-// handle 401 globally
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401 && typeof window !== "undefined") {
-      localStorage.removeItem("lifecare_token");
-      localStorage.removeItem("lifecare_user");
+async function request<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const token = getAuthToken();
+
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers,
+    },
+  });
+
+  // 401 anywhere in the admin panel means the session died — bounce to login
+  if (res.status === 401) {
+    clearSession();
+    if (typeof window !== "undefined") {
       window.location.href = "/admin/login";
     }
-    return Promise.reject(error);
+    throw new ApiError("Session expired. Please log in again.", 401);
   }
-);
 
-// ─── Auth ────────────────────────────────────────────────
-export const authAPI = {
+  const body = await res.json().catch(() => null);
+
+  if (!res.ok || body?.status === "failed") {
+    const message = (body as ApiFailure | null)?.message ?? `Request failed (${res.status})`;
+    throw new ApiError(message, res.status);
+  }
+
+  return (body?.data ?? body) as T;
+}
+
+const get = <T>(path: string) => request<T>(path, { method: "GET" });
+const post = <T>(path: string, data?: unknown) =>
+  request<T>(path, { method: "POST", body: data ? JSON.stringify(data) : undefined });
+const put = <T>(path: string, data?: unknown) =>
+  request<T>(path, { method: "PUT", body: data ? JSON.stringify(data) : undefined });
+const patch = <T>(path: string, data?: unknown) =>
+  request<T>(path, { method: "PATCH", body: data ? JSON.stringify(data) : undefined });
+const del = <T>(path: string) => request<T>(path, { method: "DELETE" });
+
+// ─── Auth ────────────────────────────────────────────────────────────
+
+export interface LoginResponse {
+  token: string;
+  user: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    role: Role;
+    position: Position | null;
+    departmentId: string | null;
+  };
+}
+
+export interface CreateStaffPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  role: Role;
+  position: Position;
+  departmentId?: string;
+}
+
+export const authApi = {
   login: (email: string, password: string) =>
-    api.post("/auth/login", { email, password }),
-  register: (data: any) => api.post("/auth/register", data),
+    post<LoginResponse>("/auth/login", { email, password }),
+  // admin-only: creates the staff account AND triggers a welcome email with their login credentials
+  createStaff: (payload: CreateStaffPayload) =>
+    post<{ id: string }>("/auth/register", payload),
 };
 
-// ─── Departments ─────────────────────────────────────────
-export const departmentsAPI = {
-  getAll: () => api.get("/departments"),
-  getOne: (id: string) => api.get(`/departments/${id}`),
-  create: (data: any) => api.post("/departments", data),
-  update: (id: string, data: any) => api.put(`/departments/${id}`, data),
-  delete: (id: string) => api.delete(`/departments/${id}`),
+// ─── Users / Staff ───────────────────────────────────────────────────
+
+export const usersApi = {
+  list: () => get<User[]>("/users"),
+  get: (id: string) => get<User>(`/users/${id}`),
+  deactivate: (id: string) => patch<User>(`/users/${id}/deactivate`, {}),
+  remove: (id: string) => del<void>(`/users/${id}`),
 };
 
-// ─── Users ───────────────────────────────────────────────
-export const usersAPI = {
-  getAll: () => api.get("/users"),
-  getOne: (id: string) => api.get(`/users/${id}`),
-  updateProfile: (data: any) => api.put("/users/profile", data),
-  deactivate: (id: string) => api.patch(`/users/${id}/deactivate`),
-  delete: (id: string) => api.delete(`/users/${id}`),
+// ─── Departments ─────────────────────────────────────────────────────
+
+export const departmentsApi = {
+  list: () => get<Department[]>("/departments"),
+  get: (id: string) => get<Department & { shiftTypes: ShiftType[]; users: User[] }>(`/departments/${id}`),
+  create: (name: string, minStaffPerShift: number) =>
+    post<Department>("/departments", { name, minStaffPerShift }),
+  update: (id: string, name: string, minStaffPerShift: number) =>
+    put<Department>(`/departments/${id}`, { name, minStaffPerShift }),
+  remove: (id: string) => del<void>(`/departments/${id}`),
 };
 
-// ─── Shifts ──────────────────────────────────────────────
-export const shiftsAPI = {
-  generate: (data: any) => api.post("/shifts/generate", data),
-  getMyShifts: () => api.get("/shifts/my-shifts"),
-  getDepartmentShifts: (departmentId: string) =>
-    api.get(`/shifts/department/${departmentId}`),
-  swapRequest: (data: any) => api.post("/shifts/swap-request", data),
-  reviewSwap: (id: string, status: string) =>
-    api.patch(`/shifts/swap-request/${id}`, { status }),
+// ─── Shift Types ─────────────────────────────────────────────────────
+
+export interface CreateShiftTypePayload {
+  name: string;
+  startTime: string;
+  endTime: string;
+  departmentId: string;
+  isDayOff?: boolean;
+}
+
+export const shiftTypesApi = {
+  listByDepartment: (departmentId: string) => get<ShiftType[]>(`/shift-types/${departmentId}`),
+  create: (payload: CreateShiftTypePayload) => post<ShiftType>("/shift-types", payload),
+  update: (id: string, payload: Partial<CreateShiftTypePayload>) =>
+    put<ShiftType>(`/shift-types/${id}`, payload),
+  remove: (id: string) => del<void>(`/shift-types/${id}`),
 };
 
-// ─── Shift Types ─────────────────────────────────────────
-export const shiftTypesAPI = {
-  getByDepartment: (departmentId: string) =>
-    api.get(`/shift-types/${departmentId}`),
-  create: (data: any) => api.post("/shift-types", data),
-  update: (id: string, data: any) => api.put(`/shift-types/${id}`, data),
-  delete: (id: string) => api.delete(`/shift-types/${id}`),
+// ─── Shifts ──────────────────────────────────────────────────────────
+
+export interface GenerateShiftPayload {
+  departmentId: string;
+  month: number;
+  year: number;
+  mode: "auto" | "manual";
+  assignments?: { userId: string; shiftTypeId: string; days: number[] }[];
+  staffGroups?: { morning?: string[]; night?: string[]; rotating?: string[] };
+}
+
+export const shiftsApi = {
+  generate: (payload: GenerateShiftPayload) =>
+    post<{ message: string; totalShifts: number }>("/shifts/generate", payload),
+  byDepartment: (departmentId: string) => get<Shift[]>(`/shifts/department/${departmentId}`),
+  swapRequests: {
+    // requires the /shifts/swap-requests/:departmentId backend patch — see backend-additions/README.md
+    byDepartment: (departmentId: string) =>
+      get<
+        {
+          id: string;
+          status: SwapStatus;
+          createdAt: string;
+          requester: { firstName: string; lastName: string };
+          targetStaff: { firstName: string; lastName: string };
+          originalShift: { date: string; shiftType: { name: string } };
+          targetShift: { date: string; shiftType: { name: string } };
+        }[]
+      >(`/shifts/swap-requests/${departmentId}`),
+    updateStatus: (id: string, status: SwapStatus) =>
+      patch<ShiftSwapRequest>(`/shifts/swap-request/${id}`, { status }),
+  },
 };
 
-// ─── Attendance ──────────────────────────────────────────
-export const attendanceAPI = {
-  clockIn: (latitude: number, longitude: number) =>
-    api.post("/attendance/clock-in", { latitude, longitude }),
-  clockOut: () => api.post("/attendance/clock-out"),
-  getMyAttendance: () => api.get("/attendance/my-attendance"),
-  getDepartmentAttendance: (departmentId: string) =>
-    api.get(`/attendance/department/${departmentId}`),
-  manualOverride: (id: string, status: string) =>
-    api.patch(`/attendance/${id}/manual`, { status }),
+// ─── Leave ───────────────────────────────────────────────────────────
+
+export const leaveApi = {
+  byDepartment: () => get<LeaveApplication[]>("/leave/department"),
+  review: (id: string, status: LeaveStatus, reviewNote?: string) =>
+    patch<{ message: string }>(`/leave/${id}/review`, { status, reviewNote }),
 };
 
-// ─── Leave ───────────────────────────────────────────────
-export const leaveAPI = {
-  apply: (data: any) => api.post("/leave", data),
-  getMyLeave: () => api.get("/leave/my-leave"),
-  getDepartmentLeave: () => api.get("/leave/department"),
-  review: (id: string, data: any) => api.patch(`/leave/${id}/review`, data),
+// ─── Attendance ──────────────────────────────────────────────────────
+
+export const attendanceApi = {
+  byDepartment: (departmentId: string) => get<AttendanceRecord[]>(`/attendance/department/${departmentId}`),
+  manualOverride: (id: string, status: AttendanceStatus) =>
+    patch<AttendanceRecord>(`/attendance/${id}/manual`, { status }),
 };
 
-// ─── Appointments ────────────────────────────────────────
-export const appointmentsAPI = {
-  book: (data: any) => api.post("/appointments", data),
-  getAll: () => api.get("/appointments"),
-  getDoctorAppointments: () => api.get("/appointments/doctor"),
-  updateStatus: (id: string, status: string) =>
-    api.patch(`/appointments/${id}/status`, { status }),
+// ─── Announcements ───────────────────────────────────────────────────
+
+export interface AnnouncementPayload {
+  title: string;
+  content: string;
+  departmentId?: string;
+}
+
+export const announcementsApi = {
+  list: () => get<Announcement[]>("/announcements"),
+  create: (payload: AnnouncementPayload) => post<Announcement>("/announcements", payload),
+  update: (id: string, payload: Pick<AnnouncementPayload, "title" | "content">) =>
+    put<Announcement>(`/announcements/${id}`, payload),
+  remove: (id: string) => del<void>(`/announcements/${id}`),
 };
 
-// ─── Reviews ─────────────────────────────────────────────
-export const reviewsAPI = {
-  submit: (data: any) => api.post("/reviews", data),
-  getApproved: () => api.get("/reviews"),
-  updateStatus: (id: string, status: string) =>
-    api.patch(`/reviews/${id}`, { status }),
+// ─── Appointments ────────────────────────────────────────────────────
+
+export const appointmentsApi = {
+  list: () => get<Appointment[]>("/appointments"),
+  updateStatus: (id: string, status: AppointmentStatus) =>
+    patch<Appointment>(`/appointments/${id}/status`, { status }),
 };
 
-// ─── Jobs ────────────────────────────────────────────────
-export const jobsAPI = {
-  getAll: () => api.get("/jobs"),
-  create: (data: any) => api.post("/jobs", data),
-  update: (id: string, data: any) => api.patch(`/jobs/${id}`, data),
-  delete: (id: string) => api.delete(`/jobs/${id}`),
-  apply: (id: string, data: any) => api.post(`/jobs/${id}/apply`, data),
-  getApplications: () => api.get("/jobs/applications"),
-  updateApplication: (id: string, status: string) =>
-    api.patch(`/jobs/applications/${id}`, { status }),
+// ─── Reviews ─────────────────────────────────────────────────────────
+
+export const reviewsApi = {
+  listApproved: () => get<Review[]>("/reviews"),
+  // requires the /reviews/all backend patch — see backend-additions/README.md
+  listAll: () => get<Review[]>("/reviews/all"),
+  updateStatus: (id: string, status: ReviewStatus) => patch<Review>(`/reviews/${id}`, { status }),
 };
 
-// ─── Posts ───────────────────────────────────────────────
-export const postsAPI = {
-  getPublished: () => api.get("/posts"),
-  getOne: (id: string) => api.get(`/posts/${id}`),
-  create: (data: any) => api.post("/posts", data),
-  update: (id: string, data: any) => api.put(`/posts/${id}`, data),
-  delete: (id: string) => api.delete(`/posts/${id}`),
-  publish: (id: string) => api.patch(`/posts/${id}/publish`),
+// ─── Jobs ────────────────────────────────────────────────────────────
+
+export interface JobListingPayload {
+  title: string;
+  department: string;
+  type: JobType;
+  description: string;
+  isOpen?: boolean;
+}
+
+export const jobsApi = {
+  list: () => get<JobListing[]>("/jobs"),
+  create: (payload: JobListingPayload) => post<JobListing>("/jobs", payload),
+  update: (id: string, payload: Partial<JobListingPayload>) => patch<JobListing>(`/jobs/${id}`, payload),
+  remove: (id: string) => del<void>(`/jobs/${id}`),
+  applications: {
+    list: () => get<JobApplication[]>("/jobs/applications"),
+    updateStatus: (id: string, status: JobApplication["status"]) =>
+      patch<JobApplication>(`/jobs/applications/${id}`, { status }),
+  },
 };
 
-// ─── Announcements ───────────────────────────────────────
-export const announcementsAPI = {
-  getAll: () => api.get("/announcements"),
-  getOne: (id: string) => api.get(`/announcements/${id}`),
-  create: (data: any) => api.post("/announcements", data),
-  update: (id: string, data: any) => api.put(`/announcements/${id}`, data),
-  delete: (id: string) => api.delete(`/announcements/${id}`),
+// ─── Posts (Blog) ────────────────────────────────────────────────────
+
+export interface PostPayload {
+  title: string;
+  content: string;
+  coverImage?: string;
+}
+
+export const postsApi = {
+  list: () => get<Post[]>("/posts"),
+  get: (id: string) => get<Post>(`/posts/${id}`),
+  create: (payload: PostPayload) => post<Post>("/posts", payload),
+  update: (id: string, payload: Pick<PostPayload, "title" | "content">) =>
+    put<Post>(`/posts/${id}`, payload),
+  remove: (id: string) => del<void>(`/posts/${id}`),
+  togglePublish: (id: string) => patch<Post>(`/posts/${id}/publish`, {}),
 };
 
-// ─── Doctors (from users with position=DOCTOR) ───────────
-export const getDoctors = async () => {
-  const res = await api.get("/users");
-  return res.data.data.filter((u: any) => u.position === "DOCTOR");
+// ─── Hospital Settings ───────────────────────────────────────────────
+
+export interface HospitalSettingsPayload {
+  name: string;
+  latitude: number;
+  longitude: number;
+  geofenceRadius: number;
+  address?: string;
+  phone?: string;
+  email?: string;
+  logoUrl?: string;
+}
+
+export const settingsApi = {
+  get: () => get<HospitalSettings>("/settings"),
+  update: (payload: HospitalSettingsPayload) => put<HospitalSettings>("/settings", payload),
 };
+
+export { ApiError };

@@ -1,242 +1,289 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, Newspaper } from "lucide-react";
+import { PageHeader } from "@/components/shared/page-header";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import {
-  BookOpen, Plus, X, CheckCircle, Pencil, Trash2,
-  Eye, EyeOff, Globe, FileText
-} from "lucide-react";
-import { postsAPI } from "@/lib/api";
-import { formatDate, truncate } from "@/lib/utils";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { postsApi, ApiError } from "@/lib/api";
+import type { PostPayload } from "@/lib/api";
+import type { Post } from "@/lib/types";
+import { formatDate } from "@/lib/utils";
+import { useAuthStore } from "@/lib/store";
 
-export default function AdminPostsPage() {
-  const [posts, setPosts] = useState<any[]>([]);
+const emptyForm: PostPayload = { title: "", content: "", coverImage: "" };
+
+export default function PostsPage() {
+  const currentUserId = useAuthStore((s) => s.user?.id);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
-  const [success, setSuccess] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Post | null>(null);
+  const [form, setForm] = useState<PostPayload>(emptyForm);
+  const [saving, setSaving] = useState(false);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<any>();
-
-  const load = () => {
+  const load = async () => {
     setLoading(true);
-    postsAPI.getPublished()
-      .then(res => setPosts(res.data.data))
-      .catch(() => setPosts([
-        { id: "1", title: "Breast Cancer Awareness", content: "Early detection saves lives...", published: true, createdAt: "2024-10-22", author: { firstName: "Abena", lastName: "Mensah" } },
-        { id: "2", title: "Prenatal Care Guide", content: "Regular prenatal visits are crucial...", published: false, createdAt: "2024-09-15", author: { firstName: "Kwame", lastName: "Asante" } },
-      ]))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const onSubmit = async (data: any) => {
-    setSubmitting(true);
     try {
-      if (editing) {
-        await postsAPI.update(editing.id, data);
-        setSuccess("Post updated successfully");
-      } else {
-        await postsAPI.create(data);
-        setSuccess("Post created as draft");
-      }
-      reset();
-      setShowForm(false);
-      setEditing(null);
-      load();
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Operation failed");
+      setPosts(await postsApi.list());
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to load posts",
+      );
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const handleEdit = (post: any) => {
-    setEditing(post);
-    setValue("title", post.title);
-    setValue("content", post.content);
-    setValue("coverImage", post.coverImage || "");
-    setShowForm(true);
+  useEffect(() => {
+    load();
+  }, []);
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm(emptyForm);
+    setDialogOpen(true);
   };
 
-  const handlePublishToggle = async (post: any) => {
+  const openEdit = (post: Post) => {
+    setEditing(post);
+    setForm({
+      title: post.title,
+      content: post.content,
+      coverImage: post.coverImage ?? "",
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.title || !form.content) {
+      toast.error("Title and content are required");
+      return;
+    }
+    setSaving(true);
     try {
-      await postsAPI.publish(post.id);
+      if (editing) {
+        if (editing.authorId !== currentUserId) {
+          toast.error("You can only edit posts you authored");
+          return;
+        }
+        await postsApi.update(editing.id, {
+          title: form.title,
+          content: form.content,
+        });
+        toast.success("Post updated");
+      } else {
+        await postsApi.create(form);
+        toast.success("Post saved as draft");
+      }
+      setDialogOpen(false);
       load();
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Failed to toggle publish");
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to save post",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTogglePublish = async (post: Post) => {
+    try {
+      await postsApi.togglePublish(post.id);
+      toast.success(post.published ? "Post unpublished" : "Post published");
+      load();
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to update post",
+      );
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this post permanently?")) return;
     try {
-      await postsAPI.delete(id);
+      await postsApi.remove(id);
+      toast.success("Post deleted");
       load();
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Cannot delete post");
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to delete post",
+      );
     }
   };
 
-  const published = posts.filter(p => p.published);
-  const drafts = posts.filter(p => !p.published);
-
   return (
-    <div className="max-w-5xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-brand-dark">Blog Posts</h1>
-          <p className="text-gray-400 text-sm mt-1">{published.length} published · {drafts.length} drafts</p>
-        </div>
-        <button
-          onClick={() => { setShowForm(true); setEditing(null); reset(); }}
-          className="btn-primary flex items-center gap-2 text-sm"
-        >
-          <Plus className="w-4 h-4" /> Write Post
-        </button>
-      </div>
-
-      {success && (
-        <div className="flex items-center gap-3 bg-green-50 border border-green-100 text-green-700 rounded-xl p-4">
-          <CheckCircle className="w-5 h-5" /><p className="text-sm font-medium">{success}</p>
-        </div>
-      )}
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
-          { label: "Published", value: published.length, icon: Globe, color: "bg-green-100 text-green-700" },
-          { label: "Drafts", value: drafts.length, icon: FileText, color: "bg-amber-100 text-amber-700" },
-          { label: "Total Posts", value: posts.length, icon: BookOpen, color: "bg-blue-100 text-blue-700" },
-        ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl shadow-card p-5">
-            <div className={`w-10 h-10 ${s.color} rounded-xl flex items-center justify-center mb-3`}>
-              <s.icon className="w-5 h-5" />
-            </div>
-            <div className="font-display font-bold text-2xl text-brand-dark">{s.value}</div>
-            <div className="text-gray-400 text-sm">{s.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Post form modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-2xl my-4">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-display text-xl font-bold text-brand-dark">
-                {editing ? "Edit Post" : "Write New Post"}
-              </h2>
-              <button onClick={() => { setShowForm(false); setEditing(null); }} className="p-2 hover:bg-gray-100 rounded-xl">
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-              <div>
-                <label className="block text-sm font-medium text-brand-dark mb-1.5">Post Title *</label>
-                <input
-                  {...register("title", { required: "Title is required" })}
-                  className="input-field text-lg font-medium"
-                  placeholder="Write a compelling title..."
-                />
-                {errors.title && <p className="text-red-500 text-xs mt-1">{String(errors.title.message)}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-brand-dark mb-1.5">Cover Image URL</label>
-                <input
-                  {...register("coverImage")}
-                  className="input-field"
-                  placeholder="https://images.unsplash.com/... (optional)"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-brand-dark mb-1.5">Content *</label>
-                <textarea
-                  {...register("content", { required: "Content is required", minLength: { value: 100, message: "Content must be at least 100 characters" } })}
-                  className="input-field resize-none h-64 font-mono text-sm"
-                  placeholder="Write your health article here... Use double line breaks to separate paragraphs."
-                />
-                {errors.content && <p className="text-red-500 text-xs mt-1">{String(errors.content.message)}</p>}
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => { setShowForm(false); setEditing(null); }} className="btn-secondary flex-1">Cancel</button>
-                <button type="submit" disabled={submitting} className="btn-primary flex-1">
-                  {submitting ? "Saving..." : editing ? "Update Post" : "Save as Draft"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Posts list */}
-      {loading ? (
-        <div className="space-y-4">
-          {[1,2,3].map(i => <div key={i} className="bg-white rounded-2xl p-6 shadow-card animate-pulse h-28" />)}
-        </div>
-      ) : posts.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-card p-12 text-center">
-          <BookOpen className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-400">No posts yet. Write your first health article.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {posts.map(post => (
-            <div key={post.id} className="bg-white rounded-2xl shadow-card p-5 flex gap-4 items-start">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                post.published ? "bg-green-100" : "bg-amber-100"
-              }`}>
-                {post.published
-                  ? <Globe className="w-5 h-5 text-green-600" />
-                  : <FileText className="w-5 h-5 text-amber-600" />
-                }
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap mb-1">
-                  <h3 className="font-display font-bold text-brand-dark truncate">{post.title}</h3>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                    post.published ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
-                  }`}>
-                    {post.published ? "Published" : "Draft"}
-                  </span>
+    <div>
+      <PageHeader
+        title="Blog"
+        description="Write and publish hospital news and stories."
+        actions={
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger>
+              <Button onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Post
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>{editing ? "Edit Post" : "New Post"}</DialogTitle>
+                <DialogDescription>
+                  New posts save as a draft — publish separately when ready.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={form.title}
+                    onChange={(e) =>
+                      setForm({ ...form, title: e.target.value })
+                    }
+                  />
                 </div>
-                <p className="text-gray-400 text-sm line-clamp-1 mb-2">{truncate(post.content, 100)}</p>
-                <div className="flex items-center gap-3 text-xs text-gray-400">
-                  <span>{formatDate(post.createdAt)}</span>
-                  {post.author && <span>by Dr. {post.author.firstName} {post.author.lastName}</span>}
+                <div className="space-y-2">
+                  <Label>Cover image URL</Label>
+                  <Input
+                    value={form.coverImage}
+                    onChange={(e) =>
+                      setForm({ ...form, coverImage: e.target.value })
+                    }
+                    placeholder="https://…"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Content</Label>
+                  <Textarea
+                    rows={10}
+                    value={form.content}
+                    onChange={(e) =>
+                      setForm({ ...form, content: e.target.value })
+                    }
+                  />
                 </div>
               </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  onClick={() => handlePublishToggle(post)}
-                  title={post.published ? "Unpublish" : "Publish"}
-                  className={`p-2 rounded-xl transition-colors ${
-                    post.published
-                      ? "text-green-600 hover:bg-green-50"
-                      : "text-gray-400 hover:bg-brand-light hover:text-brand-primary"
-                  }`}
-                >
-                  {post.published ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                </button>
-                <button
-                  onClick={() => handleEdit(post)}
-                  className="p-2 hover:bg-brand-light rounded-xl transition-colors text-gray-400 hover:text-brand-primary"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => handleDelete(post.id)}
-                  className="p-2 hover:bg-red-50 rounded-xl transition-colors text-gray-400 hover:text-red-500"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? "Saving…" : "Save"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        }
+      />
+
+      <Card>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="space-y-3 p-6">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          ) : posts.length === 0 ? (
+            <div className="p-6">
+              <EmptyState
+                icon={Newspaper}
+                title="No posts yet"
+                description="Write your first post above."
+              />
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Author</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Updated</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {posts.map((post) => (
+                  <TableRow key={post.id}>
+                    <TableCell className="max-w-xs truncate font-medium">
+                      {post.title}
+                    </TableCell>
+                    <TableCell>
+                      {post.author?.firstName} {post.author?.lastName}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className={
+                          post.published
+                            ? "border-0 bg-emerald-100 text-emerald-700 hover:bg-emerald-100"
+                            : "border-0 bg-slate-100 text-slate-700 hover:bg-slate-100"
+                        }
+                      >
+                        {post.published ? "Published" : "Draft"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {formatDate(post.updatedAt)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleTogglePublish(post)}
+                      >
+                        {post.published ? "Unpublish" : "Publish"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEdit(post)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <ConfirmDialog
+                        trigger={
+                          <Button variant="ghost" size="icon">
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        }
+                        title={`Delete "${post.title}"?`}
+                        description="This cannot be undone."
+                        confirmLabel="Delete"
+                        onConfirm={() => handleDelete(post.id)}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -1,178 +1,276 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { Bell, Plus, X, CheckCircle, Trash2, Pencil, Building2 } from "lucide-react";
-import { announcementsAPI, departmentsAPI } from "@/lib/api";
-import { formatDate } from "@/lib/utils";
+import { toast } from "sonner";
+import { Plus, Pencil, Trash2, Megaphone } from "lucide-react";
+import { PageHeader } from "@/components/shared/page-header";
+import { EmptyState } from "@/components/shared/empty-state";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { announcementsApi, departmentsApi, ApiError } from "@/lib/api";
+import type { AnnouncementPayload } from "@/lib/api";
+import type { Announcement, Department } from "@/lib/types";
+import { formatDateTime } from "@/lib/utils";
 
-export default function AdminAnnouncementsPage() {
-  const [announcements, setAnnouncements] = useState<any[]>([]);
-  const [departments, setDepartments] = useState<any[]>([]);
+const emptyForm: AnnouncementPayload = {
+  title: "",
+  content: "",
+  departmentId: undefined,
+};
+
+export default function AnnouncementsPage() {
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState<any>(null);
-  const [success, setSuccess] = useState("");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Announcement | null>(null);
+  const [form, setForm] = useState<AnnouncementPayload>(emptyForm);
+  const [saving, setSaving] = useState(false);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<any>();
-
-  const load = () => {
+  const load = async () => {
     setLoading(true);
-    Promise.allSettled([announcementsAPI.getAll(), departmentsAPI.getAll()])
-      .then(([a, d]) => {
-        if (a.status === "fulfilled") setAnnouncements(a.value.data.data);
-        if (d.status === "fulfilled") setDepartments(d.value.data.data);
-      })
-      .catch(() => setAnnouncements([
-        { id: "1", title: "July Shift Schedule Published", content: "July shift schedules are now live. Please check your dashboard.", departmentId: null, createdAt: "2026-06-30", author: { firstName: "Yaw", lastName: "Fosu" } },
-      ]))
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { load(); }, []);
-
-  const onSubmit = async (data: any) => {
     try {
-      const payload = { ...data, departmentId: data.departmentId || undefined };
-      if (editing) {
-        await announcementsAPI.update(editing.id, payload);
-        setSuccess("Announcement updated");
-      } else {
-        await announcementsAPI.create(payload);
-        setSuccess("Announcement created");
-      }
-      reset();
-      setShowForm(false);
-      setEditing(null);
-      load();
-      setTimeout(() => setSuccess(""), 3000);
-    } catch (err: any) {
-      alert(err.response?.data?.message || "Failed");
+      const [a, d] = await Promise.all([
+        announcementsApi.list(),
+        departmentsApi.list(),
+      ]);
+      setAnnouncements(
+        a.sort(
+          (x, y) =>
+            new Date(y.createdAt).getTime() - new Date(x.createdAt).getTime(),
+        ),
+      );
+      setDepartments(d);
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to load announcements",
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEdit = (ann: any) => {
-    setEditing(ann);
-    setValue("title", ann.title);
-    setValue("content", ann.content);
-    setValue("departmentId", ann.departmentId || "");
-    setShowForm(true);
+  useEffect(() => {
+    load();
+  }, []);
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm(emptyForm);
+    setDialogOpen(true);
+  };
+
+  const openEdit = (a: Announcement) => {
+    setEditing(a);
+    setForm({
+      title: a.title,
+      content: a.content,
+      departmentId: a.departmentId ?? undefined,
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.title || !form.content) {
+      toast.error("Title and content are required");
+      return;
+    }
+    setSaving(true);
+    try {
+      if (editing) {
+        await announcementsApi.update(editing.id, {
+          title: form.title,
+          content: form.content,
+        });
+        toast.success("Announcement updated");
+      } else {
+        await announcementsApi.create(form);
+        toast.success("Announcement published");
+      }
+      setDialogOpen(false);
+      load();
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to save announcement",
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this announcement?")) return;
     try {
-      await announcementsAPI.delete(id);
+      await announcementsApi.remove(id);
+      toast.success("Announcement deleted");
       load();
-    } catch {}
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to delete announcement",
+      );
+    }
   };
 
+  const departmentName = (id?: string | null) =>
+    departments.find((d) => d.id === id)?.name;
+
   return (
-    <div className="max-w-4xl space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold text-brand-dark">Announcements</h1>
-          <p className="text-gray-400 text-sm mt-1">Broadcast messages to all staff or specific departments</p>
-        </div>
-        <button
-          onClick={() => { setShowForm(true); setEditing(null); reset(); }}
-          className="btn-primary flex items-center gap-2 text-sm"
-        >
-          <Plus className="w-4 h-4" /> New Announcement
-        </button>
-      </div>
+    <div>
+      <PageHeader
+        title="Announcements"
+        description="Broadcast hospital-wide or department-specific updates to staff."
+        actions={
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger>
+              <Button onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Announcement
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>
+                  {editing ? "Edit Announcement" : "New Announcement"}
+                </DialogTitle>
+                <DialogDescription>
+                  Leave department blank to broadcast hospital-wide.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div className="space-y-2">
+                  <Label>Title</Label>
+                  <Input
+                    value={form.title}
+                    onChange={(e) =>
+                      setForm({ ...form, title: e.target.value })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Content</Label>
+                  <Textarea
+                    rows={5}
+                    value={form.content}
+                    onChange={(e) =>
+                      setForm({ ...form, content: e.target.value })
+                    }
+                  />
+                </div>
+                {!editing && (
+                  <div className="space-y-2">
+                    <Label>Department (optional)</Label>
+                    <Select
+                      value={form.departmentId}
+                      onValueChange={(v) =>
+                        setForm({ ...form, departmentId: v ?? undefined })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Hospital-wide" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.map((d) => (
+                          <SelectItem key={d.id} value={d.id}>
+                            {d.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? "Saving…" : "Publish"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
-      {success && (
-        <div className="flex items-center gap-3 bg-green-50 border border-green-100 text-green-700 rounded-xl p-4">
-          <CheckCircle className="w-5 h-5" /><p className="text-sm">{success}</p>
-        </div>
-      )}
-
-      {/* Form modal */}
-      {showForm && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-lg">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-display text-xl font-bold text-brand-dark">
-                {editing ? "Edit Announcement" : "New Announcement"}
-              </h2>
-              <button onClick={() => { setShowForm(false); setEditing(null); }} className="p-2 hover:bg-gray-100 rounded-xl">
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-brand-dark mb-1.5">Title *</label>
-                <input {...register("title", { required: true })} className="input-field" placeholder="Announcement title" />
-                {errors.title && <p className="text-red-500 text-xs mt-1">Required</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-brand-dark mb-1.5">Content *</label>
-                <textarea {...register("content", { required: true })} className="input-field resize-none h-28" placeholder="Write your announcement..." />
-                {errors.content && <p className="text-red-500 text-xs mt-1">Required</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-brand-dark mb-1.5">Target Department</label>
-                <select {...register("departmentId")} className="input-field">
-                  <option value="">— All Staff (Hospital-wide) —</option>
-                  {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-                </select>
-                <p className="text-gray-400 text-xs mt-1">Leave blank to broadcast to all staff</p>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => { setShowForm(false); setEditing(null); }} className="btn-secondary flex-1">Cancel</button>
-                <button type="submit" className="btn-primary flex-1">{editing ? "Update" : "Publish"}</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* List */}
       {loading ? (
-        <div className="space-y-4">
-          {[1,2,3].map(i => <div key={i} className="bg-white rounded-2xl p-6 shadow-card animate-pulse h-28" />)}
+        <div className="space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
         </div>
       ) : announcements.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-card p-12 text-center">
-          <Bell className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-          <p className="text-gray-400">No announcements yet</p>
-        </div>
+        <EmptyState
+          icon={Megaphone}
+          title="No announcements yet"
+          description="Publish your first announcement above."
+        />
       ) : (
         <div className="space-y-4">
-          {announcements.map(ann => (
-            <div key={ann.id} className="bg-white rounded-2xl shadow-card p-6 flex gap-4">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                ann.departmentId ? "bg-blue-100" : "bg-brand-light"
-              }`}>
-                {ann.departmentId
-                  ? <Building2 className="w-5 h-5 text-blue-600" />
-                  : <Bell className="w-5 h-5 text-brand-primary" />
-                }
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="font-display font-bold text-brand-dark">{ann.title}</h3>
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                    ann.departmentId ? "bg-blue-100 text-blue-700" : "bg-brand-light text-brand-primary"
-                  }`}>
-                    {ann.departmentId ? "Department" : "Hospital-wide"}
-                  </span>
+          {announcements.map((a) => (
+            <Card key={a.id}>
+              <CardHeader className="flex flex-row items-start justify-between space-y-0">
+                <div>
+                  <div className="mb-1 flex items-center gap-2">
+                    <h3 className="font-semibold">{a.title}</h3>
+                    <Badge variant={a.departmentId ? "secondary" : "default"}>
+                      {a.departmentId
+                        ? (departmentName(a.departmentId) ?? "Department")
+                        : "Hospital-wide"}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    By {a.author?.firstName} {a.author?.lastName} ·{" "}
+                    {formatDateTime(a.createdAt)}
+                  </p>
                 </div>
-                <p className="text-gray-500 text-sm mb-2">{ann.content}</p>
-                <div className="flex items-center gap-3 text-xs text-gray-400">
-                  <span>{formatDate(ann.createdAt)}</span>
-                  {ann.author && <span>by {ann.author.firstName} {ann.author.lastName}</span>}
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => openEdit(a)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <ConfirmDialog
+                    trigger={
+                      <Button variant="ghost" size="icon">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    }
+                    title="Delete this announcement?"
+                    description="This cannot be undone."
+                    confirmLabel="Delete"
+                    onConfirm={() => handleDelete(a.id)}
+                  />
                 </div>
-              </div>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button onClick={() => handleEdit(ann)} className="p-2 hover:bg-brand-light rounded-xl transition-colors text-gray-400 hover:text-brand-primary">
-                  <Pencil className="w-4 h-4" />
-                </button>
-                <button onClick={() => handleDelete(ann.id)} className="p-2 hover:bg-red-50 rounded-xl transition-colors text-gray-400 hover:text-red-500">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+              </CardHeader>
+              <CardContent>
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">
+                  {a.content}
+                </p>
+              </CardContent>
+            </Card>
           ))}
         </div>
       )}
