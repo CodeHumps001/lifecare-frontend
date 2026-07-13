@@ -7,7 +7,13 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { settingsApi, ApiError } from "@/lib/api";
 import type { HospitalSettingsPayload } from "@/lib/api";
@@ -47,7 +53,9 @@ export default function SettingsPage() {
       .catch((err) => {
         // 404 on first run just means settings haven't been created yet — keep the empty form
         if (!(err instanceof ApiError && err.status === 404)) {
-          toast.error(err instanceof ApiError ? err.message : "Failed to load settings");
+          toast.error(
+            err instanceof ApiError ? err.message : "Failed to load settings",
+          );
         }
       })
       .finally(() => setLoading(false));
@@ -61,7 +69,11 @@ export default function SettingsPage() {
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setForm((f) => ({ ...f, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
+        setForm((f) => ({
+          ...f,
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        }));
         setLocating(false);
         toast.success("Location captured from your current position");
       },
@@ -82,7 +94,9 @@ export default function SettingsPage() {
       await settingsApi.update(form);
       toast.success("Hospital settings saved");
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Failed to save settings");
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to save settings",
+      );
     } finally {
       setSaving(false);
     }
@@ -91,7 +105,10 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div>
-        <PageHeader title="Hospital Settings" description="Location, geofence, and general hospital information." />
+        <PageHeader
+          title="Hospital Settings"
+          description="Location, geofence, and general hospital information."
+        />
         <Skeleton className="h-96 w-full max-w-2xl" />
       </div>
     );
@@ -99,7 +116,10 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <PageHeader title="Hospital Settings" description="Location, geofence, and general hospital information." />
+      <PageHeader
+        title="Hospital Settings"
+        description="Location, geofence, and general hospital information."
+      />
 
       <div className="grid max-w-2xl gap-6">
         <Card>
@@ -108,7 +128,8 @@ export default function SettingsPage() {
               <MapPin className="h-4 w-4" /> Clock-in Geofence
             </CardTitle>
             <CardDescription>
-              Staff can only clock in from within this radius of the hospital's coordinates.
+              Staff can only clock in from within this radius of the
+              hospital&apos;s coordinates.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -119,7 +140,9 @@ export default function SettingsPage() {
                   type="number"
                   step="any"
                   value={form.latitude}
-                  onChange={(e) => setForm({ ...form, latitude: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setForm({ ...form, latitude: Number(e.target.value) })
+                  }
                 />
               </div>
               <div className="space-y-2">
@@ -128,11 +151,19 @@ export default function SettingsPage() {
                   type="number"
                   step="any"
                   value={form.longitude}
-                  onChange={(e) => setForm({ ...form, longitude: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setForm({ ...form, longitude: Number(e.target.value) })
+                  }
                 />
               </div>
             </div>
-            <Button type="button" variant="outline" size="sm" onClick={handleUseCurrentLocation} disabled={locating}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleUseCurrentLocation}
+              disabled={locating}
+            >
               <LocateFixed className="mr-2 h-4 w-4" />
               {locating ? "Locating…" : "Use my current location"}
             </Button>
@@ -141,7 +172,9 @@ export default function SettingsPage() {
               <Input
                 type="number"
                 value={form.geofenceRadius}
-                onChange={(e) => setForm({ ...form, geofenceRadius: Number(e.target.value) })}
+                onChange={(e) =>
+                  setForm({ ...form, geofenceRadius: Number(e.target.value) })
+                }
               />
             </div>
           </CardContent>
@@ -150,21 +183,32 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Hospital Information</CardTitle>
-            <CardDescription>Shown on the public website and in patient notifications.</CardDescription>
+            <CardDescription>
+              Shown on the public website and in patient notifications.
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label>Hospital name</Label>
-              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+              <Input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
             </div>
             <div className="space-y-2">
               <Label>Address</Label>
-              <Input value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
+              <Input
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Phone</Label>
-                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+                <Input
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                />
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
@@ -177,7 +221,10 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-2">
               <Label>Logo URL</Label>
-              <Input value={form.logoUrl} onChange={(e) => setForm({ ...form, logoUrl: e.target.value })} />
+              <Input
+                value={form.logoUrl}
+                onChange={(e) => setForm({ ...form, logoUrl: e.target.value })}
+              />
             </div>
           </CardContent>
         </Card>

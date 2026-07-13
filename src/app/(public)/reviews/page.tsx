@@ -9,7 +9,7 @@ import {
   ShieldCheck,
   Heart,
 } from "lucide-react";
-import { reviewsAPI } from "@/lib/api";
+import { reviewsApi } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
 const fallbackReviews = [
@@ -103,10 +103,10 @@ export default function ReviewsPage() {
   }>();
 
   useEffect(() => {
-    reviewsAPI
-      .getApproved()
-      .then((res) => {
-        const data = res.data.data;
+    reviewsApi
+      .listApproved()
+      .then((data) => {
+        // reviewsApi.listApproved() returns Review[] directly
         setReviews(data.length > 0 ? data : fallbackReviews);
       })
       .catch(() => setReviews(fallbackReviews))
@@ -125,15 +125,27 @@ export default function ReviewsPage() {
     setSubmitting(true);
     setError("");
     try {
-      await reviewsAPI.submit({ ...data, rating });
+      // Use direct fetch since reviewsApi doesn't have a submit method
+      const BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api/v1";
+      const response = await fetch(`${BASE_URL}/reviews`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ...data, rating }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to submit review");
+      }
+
       setSubmitted(true);
       reset();
       setRating(0);
     } catch (err: any) {
-      setError(
-        err.response?.data?.message ||
-          "Failed to submit operational review packet.",
-      );
+      setError(err.message || "Failed to submit operational review packet.");
     } finally {
       setSubmitting(false);
     }
@@ -208,7 +220,7 @@ export default function ReviewsPage() {
                     <StarRating rating={review.rating} />
                   </div>
                   <p className="text-slate-600 text-xs sm:text-sm font-normal leading-relaxed italic">
-                    "{review.comment}"
+                    &quot;{review.comment}&quot;
                   </p>
                 </div>
 

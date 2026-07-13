@@ -136,10 +136,10 @@ export default function AboutPage() {
             <div className="text-slate-600 text-sm sm:text-base space-y-4 font-normal leading-relaxed">
               <p>
                 Divine Netcare Hospital was established to address the expanding
-                operational healthcare needs of Kumasi's growing population.
-                Located at Kronum-Abouhia, we have systematically scaled from a
-                targeted community clinic into a comprehensive, multi-specialty
-                hospital asset serving thousands.
+                operational healthcare needs of Kumasi&apos;s growing
+                population. Located at Kronum-Abouhia, we have systematically
+                scaled from a targeted community clinic into a comprehensive,
+                multi-specialty hospital asset serving thousands.
               </p>
               <p>
                 Our name reflects our foundational perspective — that rendering

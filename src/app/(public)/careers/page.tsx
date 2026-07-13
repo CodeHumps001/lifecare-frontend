@@ -16,7 +16,7 @@ import {
   ShieldCheck,
   GraduationCap,
 } from "lucide-react";
-import { jobsAPI } from "@/lib/api";
+import { jobsApi } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
 const jobTypeBadge: Record<string, string> = {
@@ -105,10 +105,10 @@ export default function CareersPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    jobsAPI
-      .getAll()
-      .then((res) => {
-        const data = res?.data?.data || [];
+    jobsApi
+      .list()
+      .then((data) => {
+        // jobsApi.list() returns JobListing[] directly
         setJobs(data.length > 0 ? data : fallbackJobs);
       })
       .catch(() => setJobs(fallbackJobs))
@@ -292,7 +292,7 @@ export default function CareersPage() {
           <div className="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-8">
             <div className="space-y-2 max-w-xl">
               <h3 className="text-2xl font-extrabold text-white tracking-tight">
-                Don't See a Matching Role?
+                Don&apos;t See a Matching Role?
               </h3>
               <p className="text-slate-300 text-sm sm:text-base leading-relaxed font-normal">
                 Submit a spontaneous profile transmission. We monitor our talent

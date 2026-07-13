@@ -17,7 +17,7 @@ import {
   HelpCircle,
   Sparkles,
 } from "lucide-react";
-import { jobsAPI } from "@/lib/api";
+import { jobsApi } from "@/lib/api";
 
 const schema = z.object({
   name: z.string().min(2, "Full name is required"),
@@ -54,10 +54,10 @@ export default function JobApplicationPage({
   });
 
   useEffect(() => {
-    jobsAPI
-      .getAll()
-      .then((res) => {
-        const found = res?.data?.data?.find((j: any) => j.id === params.id);
+    jobsApi
+      .list()
+      .then((jobs) => {
+        const found = jobs.find((j: any) => j.id === params.id);
         setJob(
           found || {
             id: params.id,
@@ -85,12 +85,26 @@ export default function JobApplicationPage({
     setLoading(true);
     setError("");
     try {
-      await jobsAPI.apply(params.id, data);
+      // Use direct fetch since jobsApi doesn't have an apply method
+      const BASE_URL =
+        process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api/v1";
+      const response = await fetch(`${BASE_URL}/jobs/${params.id}/apply`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to submit application");
+      }
+
       setSubmitted(true);
     } catch (err: any) {
       setError(
-        err.response?.data?.message ||
-          "Failed to submit application. Please try again.",
+        err.message || "Failed to submit application. Please try again.",
       );
     } finally {
       setLoading(false);

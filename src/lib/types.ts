@@ -72,6 +72,11 @@ export interface User {
   departmentId: string | null;
   isActive: boolean;
   createdAt: string;
+  // ─── Shift cycle fields ──────────────────────────────
+  cycleOffset?: number; // Staff's position in the cycle
+  personalCycle?: string | null; // JSON string of personal cycle
+  cycleStartDate?: string | null; // When they started the cycle
+  // ────────────────────────────────────────────────────
   profile?: StaffProfile | null;
   department?: { id: string; name: string } | null;
 }

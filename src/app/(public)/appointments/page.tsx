@@ -16,7 +16,10 @@ import {
   Sparkles,
   ShieldCheck,
 } from "lucide-react";
-import { appointmentsAPI, usersAPI } from "@/lib/api";
+import { appointmentsApi, usersApi } from "@/lib/api";
+
+// We need to check if there's a public booking API
+// Based on your api.ts, the Public object has bookAppointment
 
 const schema = z.object({
   doctorId: z.string().min(1, "Please select a doctor"),
@@ -47,11 +50,10 @@ export default function AppointmentsPage() {
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   useEffect(() => {
-    usersAPI
-      .getAll()
-      .then((res) => {
-        const docs =
-          res?.data?.data?.filter((u: any) => u.position === "DOCTOR") || [];
+    usersApi
+      .list()
+      .then((users) => {
+        const docs = users.filter((u: any) => u.position === "DOCTOR") || [];
         setDoctors(
           docs.length > 0
             ? docs
@@ -93,12 +95,38 @@ export default function AppointmentsPage() {
     setLoading(true);
     setError("");
     try {
-      await appointmentsAPI.book(data);
+      // Use the Public API for booking (no auth required)
+      // Import Public from your API or use the correct booking method
+      // Since we don't have the Public import, let's use fetch directly or add the import
+
+      // Option 1: If you have Public exported from api
+      // import { Public } from "@/lib/api";
+      // await Public.bookAppointment(data);
+
+      // Option 2: If appointmentsApi has a book method (it doesn't)
+      // await appointmentsApi.book(data);
+
+      // Option 3: Direct fetch (fallback)
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api/v1"}/appointments`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(data),
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to book appointment");
+      }
+
       setSubmitted(true);
     } catch (err: any) {
       setError(
-        err.response?.data?.message ||
-          "Failed to book appointment. Please call us directly.",
+        err.message || "Failed to book appointment. Please call us directly.",
       );
     } finally {
       setLoading(false);
@@ -212,7 +240,7 @@ export default function AppointmentsPage() {
 
         {/* Dynamic Split Component */}
         <div className="bg-white border border-slate-200/60 rounded-3xl shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[580px]">
-          {/* LEFT PANEL: Professional Art Cover (Hidden on smaller viewports) */}
+          {/* LEFT PANEL: Professional Art Cover */}
           <div className="hidden lg:block lg:col-span-5 relative bg-slate-900 overflow-hidden">
             <Image
               src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?auto=format&fit=crop&w=800&q=80"
@@ -221,10 +249,7 @@ export default function AppointmentsPage() {
               priority
               className="object-cover opacity-85 brightness-[0.85] saturate-[0.9] transition-transform duration-700 hover:scale-105"
             />
-            {/* Dark/Emerald Vignette Gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent" />
-
-            {/* Elegant Contextual Overlays */}
             <div className="absolute bottom-8 left-6 right-6 p-6 rounded-2xl bg-white/10 border border-white/10 backdrop-blur-xl text-white space-y-2 shadow-xl">
               <div className="flex items-center gap-2 text-emerald-300 text-xs font-bold uppercase tracking-widest">
                 <ShieldCheck className="w-4 h-4 fill-emerald-500/20 text-emerald-400" />{" "}

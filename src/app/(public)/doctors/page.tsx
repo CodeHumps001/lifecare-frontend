@@ -13,7 +13,7 @@ import {
   Clock,
   ChevronRight,
 } from "lucide-react";
-import { usersAPI } from "@/lib/api";
+import { usersApi } from "@/lib/api";
 
 // Type definitions matching your Prisma schema
 interface StaffProfile {
@@ -226,11 +226,11 @@ export default function DoctorsPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    usersAPI
-      .getAll()
-      .then((res) => {
-        const docs =
-          res?.data?.data?.filter((u: any) => u.position === "DOCTOR") || [];
+    usersApi
+      .list()
+      .then((users) => {
+        // usersApi.list() returns User[] directly
+        const docs = users.filter((u: any) => u.position === "DOCTOR") || [];
         const mappedDoctors = docs.map((doc: any) => ({
           ...doc,
           profile: doc.profile || null,
@@ -238,7 +238,7 @@ export default function DoctorsPage() {
         }));
         setDoctors(mappedDoctors.length > 0 ? mappedDoctors : fallbackDoctors);
       })
-      .catch((err) => {
+      .catch(() => {
         setDoctors(fallbackDoctors);
       })
       .finally(() => setLoading(false));

@@ -11,7 +11,7 @@ import {
   ShieldAlert,
   HeartPulse,
 } from "lucide-react";
-import { postsAPI } from "@/lib/api";
+import { postsApi } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
 // Helper function to format content intelligently
@@ -69,11 +69,15 @@ export default function BlogPostPage({ params }: { params: { id: string } }) {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    postsAPI
-      .getOne(params.id)
-      .then((res) => setPost(res?.data?.data || null))
+    postsApi
+      .get(params.id)
+      .then((data) => {
+        // postsApi.get() returns Post directly
+        setPost(data);
+      })
       .catch(() =>
         setPost({
+          id: params.id,
           title: "Breast Cancer Awareness: What Every Woman Should Know",
           content: `Early detection saves lives. Breast cancer is one of the most common cancers affecting women in Ghana and across Africa. At Divine Netcare Hospital, we are committed to raising awareness and providing the screening and treatment services you need.\n\nRegular breast self-examination is a simple but powerful tool. Every woman should perform a self-check monthly, ideally a few days after your menstrual period ends. You are looking for any changes in the shape or size of your breast, unusual lumps or thickening, changes to the skin or nipple, or any unusual discharge.\n\nClinical breast examinations by a healthcare professional are also important. Women over 40 should aim for a mammogram every one to two years. At Divine Netcare, our team can guide you through this process.\n\nRemember — early detection dramatically improves treatment outcomes. If you notice any changes, do not wait. Come in and see one of our doctors as soon as possible. We are here for you.`,
           coverImage:

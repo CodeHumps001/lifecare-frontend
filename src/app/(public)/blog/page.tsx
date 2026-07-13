@@ -10,8 +10,15 @@ import {
   Sparkles,
   Clock,
 } from "lucide-react";
-import { postsAPI } from "@/lib/api";
-import { formatDate, truncate } from "@/lib/utils";
+import { postsApi } from "@/lib/api";
+import { formatDate } from "@/lib/utils";
+
+// ─── truncate helper ────────────────────────────────────────────────
+const truncate = (text: string, length: number = 120) => {
+  if (!text) return "";
+  if (text.length <= length) return text;
+  return text.substring(0, length) + "...";
+};
 
 const fallbackPosts = [
   {
@@ -23,6 +30,7 @@ const fallbackPosts = [
       "https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=600&h=400&fit=crop",
     createdAt: "2024-10-22",
     author: { firstName: "Dr. Abena", lastName: "Mensah" },
+    published: true,
   },
   {
     id: "2",
@@ -33,6 +41,7 @@ const fallbackPosts = [
       "https://images.unsplash.com/photo-1584820927498-cfe5211fd8bf?w=600&h=400&fit=crop",
     createdAt: "2024-09-15",
     author: { firstName: "Dr. Kwame", lastName: "Asante" },
+    published: true,
   },
   {
     id: "3",
@@ -43,6 +52,7 @@ const fallbackPosts = [
       "https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&h=400&fit=crop",
     createdAt: "2024-08-05",
     author: { firstName: "Dr. Kofi", lastName: "Boateng" },
+    published: true,
   },
   {
     id: "4",
@@ -53,6 +63,7 @@ const fallbackPosts = [
       "https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=600&h=400&fit=crop",
     createdAt: "2024-07-20",
     author: { firstName: "Dr. Ama", lastName: "Owusu" },
+    published: true,
   },
   {
     id: "5",
@@ -63,6 +74,7 @@ const fallbackPosts = [
       "https://images.unsplash.com/photo-1582560475093-ba66accbc424?w=600&h=400&fit=crop",
     createdAt: "2024-06-10",
     author: { firstName: "Dr. Kwame", lastName: "Asante" },
+    published: true,
   },
   {
     id: "6",
@@ -73,6 +85,7 @@ const fallbackPosts = [
       "https://images.unsplash.com/photo-1489367874814-848bf5108ae4?w=600&h=400&fit=crop",
     createdAt: "2024-05-18",
     author: { firstName: "Dr. Abena", lastName: "Mensah" },
+    published: true,
   },
 ];
 
@@ -93,11 +106,12 @@ export default function BlogPage() {
   const [activeCategory, setActiveCategory] = useState("All");
 
   useEffect(() => {
-    postsAPI
-      .getPublished()
-      .then((res) => {
-        const data = res?.data?.data || [];
-        setPosts(data.length > 0 ? data : fallbackPosts);
+    postsApi
+      .list()
+      .then((data) => {
+        // postsApi.list() returns Post[] directly
+        const published = data.filter((p: any) => p.published !== false) || [];
+        setPosts(published.length > 0 ? published : fallbackPosts);
       })
       .catch(() => setPosts(fallbackPosts))
       .finally(() => setLoading(false));

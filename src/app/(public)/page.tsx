@@ -153,7 +153,6 @@ const blogPosts = [
   },
 ];
 
-// Content made slightly longer to fill out the vertical landscape baseline perfectly
 const heroSlides = [
   {
     titleHighlight: "Our Divine Care",
@@ -510,7 +509,7 @@ export default function HomePage() {
                 <div>
                   <Quote className="w-4 h-4 text-emerald-200 mb-2 stroke-[2]" />
                   <p className="text-slate-600 text-[11px] sm:text-xs leading-relaxed mb-3 italic">
-                    "{review.text}"
+                    &quot;{review.text}&quot;
                   </p>
                 </div>
                 <div className="flex items-center gap-2.5 pt-2 border-t border-slate-200/40">
