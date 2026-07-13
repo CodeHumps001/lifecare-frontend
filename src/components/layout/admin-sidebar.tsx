@@ -13,6 +13,7 @@ import {
   Briefcase,
   Star,
   Bell,
+  Settings,
   TrendingUp,
   LogOut,
   X,
@@ -37,6 +38,8 @@ const navItems: NavItem[] = [
   { title: "Reviews", href: "/admin/reviews", icon: Star },
   { title: "Posts", href: "/admin/posts", icon: TrendingUp },
   { title: "Announcements", href: "/admin/announcements", icon: Bell },
+  { title: "Leave", href: "/admin/leave", icon: Settings },
+  { title: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
 export function AdminSidebar() {
