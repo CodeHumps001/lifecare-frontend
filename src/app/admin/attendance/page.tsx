@@ -2,8 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Clock4, Calendar as CalendarIcon, Download, X } from "lucide-react";
-import { format, isValid } from "date-fns";
+import {
+  Clock4,
+  Calendar as CalendarIcon,
+  Download,
+  X,
+  Layers,
+} from "lucide-react";
+import {
+  format,
+  isValid,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  isWithinInterval,
+} from "date-fns";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -38,9 +52,10 @@ import type {
   AttendanceStatus,
   Department,
 } from "@/lib/types";
-import { formatDateTime, cn } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 
 const STATUS_OPTIONS: AttendanceStatus[] = ["PRESENT", "LATE", "ABSENT"];
+type ReportType = "daily" | "weekly" | "monthly" | "all";
 
 export default function AttendancePage() {
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -49,10 +64,19 @@ export default function AttendancePage() {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  // Set default initial date to today
+  // Date range and report type state variables
   const [exportDate, setExportDate] = useState<Date | undefined>(new Date());
+  const [reportType, setReportType] = useState<ReportType>("daily");
 
-  // Safe matching helper to prevent timezone offsets from shifting records across midnights
+  const formatTimeSafe = (
+    dateStr: string | Date | undefined | null,
+  ): string => {
+    if (!dateStr) return "—";
+    const parsed = new Date(dateStr);
+    return isValid(parsed) ? format(parsed, "yyyy-MM-dd hh:mm:ss a") : "—";
+  };
+
+  // Base timezone fallback day matcher
   const isMatchingDate = (
     record: AttendanceRecord,
     targetDate: Date,
@@ -83,10 +107,36 @@ export default function AttendancePage() {
     return matchesLocal || matchesUTC;
   };
 
-  // Client-side safety filter applied on top of server payload
-  const displayedRecords = exportDate
-    ? records.filter((r) => isMatchingDate(r, exportDate))
-    : records;
+  // Dynamic filter selector based on chosen ReportType interval
+  const displayedRecords = (() => {
+    if (!exportDate || reportType === "all") return records;
+
+    return records.filter((r) => {
+      const dateStr = r.clockIn || r.createdAt;
+      if (!dateStr) return false;
+
+      const recordDate = new Date(dateStr);
+      if (!isValid(recordDate)) return false;
+
+      if (reportType === "daily") {
+        return isMatchingDate(r, exportDate);
+      }
+
+      if (reportType === "weekly") {
+        const start = startOfWeek(exportDate, { weekStartsOn: 1 }); // Starts Monday
+        const end = endOfWeek(exportDate, { weekStartsOn: 1 });
+        return isWithinInterval(recordDate, { start, end });
+      }
+
+      if (reportType === "monthly") {
+        const start = startOfMonth(exportDate);
+        const end = endOfMonth(exportDate);
+        return isWithinInterval(recordDate, { start, end });
+      }
+
+      return false;
+    });
+  })();
 
   // 1. Initial Load: Fetch available departments
   useEffect(() => {
@@ -103,14 +153,17 @@ export default function AttendancePage() {
       );
   }, []);
 
-  // 2. Fetch attendance records: Triggers on both department changes AND calendar selections
+  // 2. Fetch records: Query single day for "daily" speed, or fetch all department history for range generation
   useEffect(() => {
     if (!departmentId) return;
 
     setLoading(true);
 
-    // Format selected calendar date to 'YYYY-MM-DD' to query the backend database
-    const dateParam = exportDate ? format(exportDate, "yyyy-MM-dd") : undefined;
+    // Only pass date limit to backend if looking for a specific single-day report
+    const dateParam =
+      reportType === "daily" && exportDate
+        ? format(exportDate, "yyyy-MM-dd")
+        : undefined;
 
     attendanceApi
       .byDepartment(departmentId, dateParam)
@@ -123,7 +176,7 @@ export default function AttendancePage() {
         ),
       )
       .finally(() => setLoading(false));
-  }, [departmentId, exportDate]);
+  }, [departmentId, exportDate, reportType]);
 
   const handleOverride = async (id: string, status: AttendanceStatus) => {
     setUpdatingId(id);
@@ -148,9 +201,7 @@ export default function AttendancePage() {
 
     if (displayedRecords.length === 0) {
       toast.error(
-        exportDate
-          ? `No attendance records found for ${format(exportDate, "PP")}`
-          : "No attendance records available to export",
+        "No attendance records found for the selected reporting range.",
       );
       return;
     }
@@ -168,8 +219,8 @@ export default function AttendancePage() {
       `${r.user?.firstName ?? ""} ${r.user?.lastName ?? ""}`.trim(),
       deptName,
       r.shift?.shiftType?.name ?? "—",
-      r.clockIn ? formatDateTime(r.clockIn) : "—",
-      r.clockOut ? formatDateTime(r.clockOut) : "—",
+      r.clockIn ? formatTimeSafe(r.clockIn) : "—",
+      r.clockOut ? formatTimeSafe(r.clockOut) : "—",
       r.status,
     ]);
 
@@ -183,21 +234,44 @@ export default function AttendancePage() {
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    const formattedFileDate = exportDate
-      ? format(exportDate, "yyyy-MM-dd")
-      : "all_dates";
+
+    // File Name Construction based on Report Type
+    let fileSuffix = "all_dates";
+    if (exportDate && reportType === "daily") {
+      fileSuffix = `daily_${format(exportDate, "yyyy-MM-dd")}`;
+    } else if (exportDate && reportType === "weekly") {
+      const start = startOfWeek(exportDate, { weekStartsOn: 1 });
+      fileSuffix = `weekly_starting_${format(start, "yyyy-MM-dd")}`;
+    } else if (exportDate && reportType === "monthly") {
+      fileSuffix = `monthly_${format(exportDate, "yyyy-MM")}`;
+    }
 
     link.setAttribute("href", url);
     link.setAttribute(
       "download",
-      `attendance_${deptName.toLowerCase().replace(/\s+/g, "_")}_${formattedFileDate}.csv`,
+      `attendance_${deptName.toLowerCase().replace(/\s+/g, "_")}_${fileSuffix}.csv`,
     );
     link.style.visibility = "hidden";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
 
-    toast.success(`Exported ${displayedRecords.length} records!`);
+    toast.success(
+      `Exported ${displayedRecords.length} records in ${reportType} report!`,
+    );
+  };
+
+  // Helper label formatting for Calendar trigger UI
+  const getCalendarButtonLabel = (): string => {
+    if (!exportDate || reportType === "all") return "All Dates";
+    if (reportType === "daily") return format(exportDate, "PPP");
+    if (reportType === "weekly") {
+      const start = startOfWeek(exportDate, { weekStartsOn: 1 });
+      const end = endOfWeek(exportDate, { weekStartsOn: 1 });
+      return `Week: ${format(start, "MMM d")} - ${format(end, "MMM d, yyyy")}`;
+    }
+    if (reportType === "monthly") return format(exportDate, "MMMM yyyy");
+    return "Select Date";
   };
 
   return (
@@ -207,8 +281,10 @@ export default function AttendancePage() {
         description="Geofenced clock-in/out records with manual override."
       />
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="w-full max-w-xs">
+      {/* Control Filters Panel */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-4 md:items-end">
+        {/* 1. Department selection */}
+        <div>
           <Label className="mb-2 block text-sm font-medium">Department</Label>
           <Select
             value={departmentId}
@@ -227,66 +303,84 @@ export default function AttendancePage() {
           </Select>
         </div>
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
-          <div className="flex flex-col gap-2">
-            <Label className="text-sm font-medium">
-              Filter Date / Export Target
-            </Label>
-            <div className="flex items-center gap-2">
-              <Popover>
-                <PopoverTrigger>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal sm:w-[240px] bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100",
-                      !exportDate && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {exportDate ? (
-                      format(exportDate, "PPP")
-                    ) : (
-                      <span>All Dates</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent
-                  className="w-auto p-0 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
-                  align="end"
-                >
-                  <Calendar
-                    mode="single"
-                    selected={exportDate}
-                    onSelect={setExportDate}
-                  />
-                </PopoverContent>
-              </Popover>
-
-              {exportDate && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setExportDate(undefined)}
-                  title="Clear date filter"
-                  className="hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <Button
-            onClick={handleExportCSV}
-            disabled={loading || displayedRecords.length === 0}
-            className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-950 transition-colors"
+        {/* 2. Report Type selection */}
+        <div>
+          <Label className="mb-2 block text-sm font-medium">Report Range</Label>
+          <Select
+            value={reportType}
+            onValueChange={(v) => setReportType(v as ReportType)}
           >
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
+            <SelectTrigger className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100">
+              <SelectItem value="daily">Daily Report</SelectItem>
+              <SelectItem value="weekly">Weekly Report</SelectItem>
+              <SelectItem value="monthly">Monthly Report</SelectItem>
+              <SelectItem value="all">All History</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
+
+        {/* 3. Date picker trigger */}
+        <div>
+          <Label className="mb-2 block text-sm font-medium">
+            Target Date / Reference
+          </Label>
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger>
+                <Button
+                  variant="outline"
+                  disabled={reportType === "all"}
+                  className={cn(
+                    "w-full justify-start text-left font-normal bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100",
+                    (!exportDate || reportType === "all") &&
+                      "text-muted-foreground",
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  <span>{getCalendarButtonLabel()}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-auto p-0 bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+                align="end"
+              >
+                <Calendar
+                  mode="single"
+                  selected={exportDate}
+                  onSelect={setExportDate}
+                />
+              </PopoverContent>
+            </Popover>
+
+            {exportDate && reportType !== "all" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setExportDate(undefined)}
+                title="Clear date selection"
+                className="hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* 4. Export button */}
+        <Button
+          onClick={handleExportCSV}
+          disabled={loading || displayedRecords.length === 0}
+          className="bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-slate-200 text-white dark:text-slate-950 transition-colors h-10 w-full"
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Export {reportType.charAt(0).toUpperCase() + reportType.slice(1)} CSV
+        </Button>
       </div>
 
+      {/* Main Table */}
       <Card className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
         <CardContent className="p-0">
           {loading ? (
@@ -304,8 +398,8 @@ export default function AttendancePage() {
                 icon={Clock4}
                 title="No attendance records"
                 description={
-                  exportDate
-                    ? `No records found for ${format(exportDate, "PP")}.`
+                  exportDate && reportType !== "all"
+                    ? `No records match the active ${reportType} filter range.`
                     : "Nothing recorded for this department yet."
                 }
               />
@@ -357,10 +451,10 @@ export default function AttendancePage() {
                         {r.shift?.shiftType?.name ?? "—"}
                       </TableCell>
                       <TableCell className="text-sm text-slate-600 dark:text-slate-300">
-                        {r.clockIn ? formatDateTime(r.clockIn) : "—"}
+                        {formatTimeSafe(r.clockIn)}
                       </TableCell>
                       <TableCell className="text-sm text-slate-600 dark:text-slate-300">
-                        {r.clockOut ? formatDateTime(r.clockOut) : "—"}
+                        {formatTimeSafe(r.clockOut)}
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={r.status} />
