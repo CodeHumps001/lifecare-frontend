@@ -25,7 +25,8 @@ import type {
   User,
 } from "./types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api/v1";
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api/v1";
 
 class ApiError extends Error {
   status: number;
@@ -35,10 +36,7 @@ class ApiError extends Error {
   }
 }
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getAuthToken();
 
   const res = await fetch(`${BASE_URL}${path}`, {
@@ -62,20 +60,31 @@ async function request<T>(
   const body = await res.json().catch(() => null);
 
   if (!res.ok || body?.status === "failed") {
-    const message = (body as ApiFailure | null)?.message ?? `Request failed (${res.status})`;
+    const message =
+      (body as ApiFailure | null)?.message ?? `Request failed (${res.status})`;
     throw new ApiError(message, res.status);
   }
 
   return (body?.data ?? body) as T;
 }
 
-const get = <T>(path: string) => request<T>(path, { method: "GET" });
+const get = <T>(path: string) =>
+  request<T>(path, { method: "GET", cache: "no-store" });
 const post = <T>(path: string, data?: unknown) =>
-  request<T>(path, { method: "POST", body: data ? JSON.stringify(data) : undefined });
+  request<T>(path, {
+    method: "POST",
+    body: data ? JSON.stringify(data) : undefined,
+  });
 const put = <T>(path: string, data?: unknown) =>
-  request<T>(path, { method: "PUT", body: data ? JSON.stringify(data) : undefined });
+  request<T>(path, {
+    method: "PUT",
+    body: data ? JSON.stringify(data) : undefined,
+  });
 const patch = <T>(path: string, data?: unknown) =>
-  request<T>(path, { method: "PATCH", body: data ? JSON.stringify(data) : undefined });
+  request<T>(path, {
+    method: "PATCH",
+    body: data ? JSON.stringify(data) : undefined,
+  });
 const del = <T>(path: string) => request<T>(path, { method: "DELETE" });
 
 // ─── Auth ────────────────────────────────────────────────────────────
@@ -124,7 +133,10 @@ export const usersApi = {
 
 export const departmentsApi = {
   list: () => get<Department[]>("/departments"),
-  get: (id: string) => get<Department & { shiftTypes: ShiftType[]; users: User[] }>(`/departments/${id}`),
+  get: (id: string) =>
+    get<Department & { shiftTypes: ShiftType[]; users: User[] }>(
+      `/departments/${id}`,
+    ),
   create: (name: string, minStaffPerShift: number) =>
     post<Department>("/departments", { name, minStaffPerShift }),
   update: (id: string, name: string, minStaffPerShift: number) =>
@@ -143,8 +155,10 @@ export interface CreateShiftTypePayload {
 }
 
 export const shiftTypesApi = {
-  listByDepartment: (departmentId: string) => get<ShiftType[]>(`/shift-types/${departmentId}`),
-  create: (payload: CreateShiftTypePayload) => post<ShiftType>("/shift-types", payload),
+  listByDepartment: (departmentId: string) =>
+    get<ShiftType[]>(`/shift-types/${departmentId}`),
+  create: (payload: CreateShiftTypePayload) =>
+    post<ShiftType>("/shift-types", payload),
   update: (id: string, payload: Partial<CreateShiftTypePayload>) =>
     put<ShiftType>(`/shift-types/${id}`, payload),
   remove: (id: string) => del<void>(`/shift-types/${id}`),
@@ -164,7 +178,8 @@ export interface GenerateShiftPayload {
 export const shiftsApi = {
   generate: (payload: GenerateShiftPayload) =>
     post<{ message: string; totalShifts: number }>("/shifts/generate", payload),
-  byDepartment: (departmentId: string) => get<Shift[]>(`/shifts/department/${departmentId}`),
+  byDepartment: (departmentId: string) =>
+    get<Shift[]>(`/shifts/department/${departmentId}`),
   swapRequests: {
     // requires the /shifts/swap-requests/:departmentId backend patch — see backend-additions/README.md
     byDepartment: (departmentId: string) =>
@@ -195,7 +210,14 @@ export const leaveApi = {
 // ─── Attendance ──────────────────────────────────────────────────────
 
 export const attendanceApi = {
-  byDepartment: (departmentId: string) => get<AttendanceRecord[]>(`/attendance/department/${departmentId}`),
+  // 1. Added optional dateString parameter
+  byDepartment: (departmentId: string, dateString?: string) => {
+    const query = dateString ? `?date=${dateString}` : "";
+    return get<AttendanceRecord[]>(
+      `/attendance/department/${departmentId}${query}`,
+    );
+  },
+
   manualOverride: (id: string, status: AttendanceStatus) =>
     patch<AttendanceRecord>(`/attendance/${id}/manual`, { status }),
 };
@@ -210,9 +232,12 @@ export interface AnnouncementPayload {
 
 export const announcementsApi = {
   list: () => get<Announcement[]>("/announcements"),
-  create: (payload: AnnouncementPayload) => post<Announcement>("/announcements", payload),
-  update: (id: string, payload: Pick<AnnouncementPayload, "title" | "content">) =>
-    put<Announcement>(`/announcements/${id}`, payload),
+  create: (payload: AnnouncementPayload) =>
+    post<Announcement>("/announcements", payload),
+  update: (
+    id: string,
+    payload: Pick<AnnouncementPayload, "title" | "content">,
+  ) => put<Announcement>(`/announcements/${id}`, payload),
   remove: (id: string) => del<void>(`/announcements/${id}`),
 };
 
@@ -230,7 +255,8 @@ export const reviewsApi = {
   listApproved: () => get<Review[]>("/reviews"),
   // requires the /reviews/all backend patch — see backend-additions/README.md
   listAll: () => get<Review[]>("/reviews/all"),
-  updateStatus: (id: string, status: ReviewStatus) => patch<Review>(`/reviews/${id}`, { status }),
+  updateStatus: (id: string, status: ReviewStatus) =>
+    patch<Review>(`/reviews/${id}`, { status }),
 };
 
 // ─── Jobs ────────────────────────────────────────────────────────────
@@ -246,7 +272,8 @@ export interface JobListingPayload {
 export const jobsApi = {
   list: () => get<JobListing[]>("/jobs"),
   create: (payload: JobListingPayload) => post<JobListing>("/jobs", payload),
-  update: (id: string, payload: Partial<JobListingPayload>) => patch<JobListing>(`/jobs/${id}`, payload),
+  update: (id: string, payload: Partial<JobListingPayload>) =>
+    patch<JobListing>(`/jobs/${id}`, payload),
   remove: (id: string) => del<void>(`/jobs/${id}`),
   applications: {
     list: () => get<JobApplication[]>("/jobs/applications"),
@@ -288,7 +315,8 @@ export interface HospitalSettingsPayload {
 
 export const settingsApi = {
   get: () => get<HospitalSettings>("/settings"),
-  update: (payload: HospitalSettingsPayload) => put<HospitalSettings>("/settings", payload),
+  update: (payload: HospitalSettingsPayload) =>
+    put<HospitalSettings>("/settings", payload),
 };
 
 export { ApiError };
