@@ -1,7 +1,7 @@
-// app/admin/layout.tsx
 "use client";
 
 import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { Menu } from "lucide-react";
 import { AdminSidebar } from "@/components/layout/admin-sidebar";
 import { RouteGuard } from "@/components/layout/route-guard";
@@ -21,7 +21,20 @@ function MobileTopbar() {
       >
         <Menu className="h-5 w-5" />
       </button>
-      <span className="text-sm font-semibold">Divine Netcare · Admin</span>
+      {/* Optimized Logo Container with no redundant brand text */}
+      <div className="flex items-center gap-2">
+        <Image
+          src="/logo.jpeg"
+          alt="Divine Netcare"
+          width={120}
+          height={32}
+          className="h-7 w-auto object-contain"
+          priority
+        />
+        <span className="text-xs font-semibold text-slate-400 border-l border-slate-200 pl-2">
+          Admin
+        </span>
+      </div>
     </div>
   );
 }

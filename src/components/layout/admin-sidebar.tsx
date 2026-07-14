@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore, useAuthStore } from "@/lib/store";
+import Image from "next/image";
 
 interface NavItem {
   title: string;
@@ -62,11 +63,15 @@ export function AdminSidebar() {
     <div className="flex h-full w-64 flex-col bg-white border-r overflow-hidden">
       {/* Header - fixed */}
       <div className="flex h-16 shrink-0 items-center justify-between border-b px-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-600">
-            <span className="text-sm font-bold text-white">DN</span>
-          </div>
-          <span className="text-sm font-semibold">Divine Netcare</span>
+        <div className="flex h-16 items-center px-6 border-b border-slate-100 bg-white">
+          <Image
+            src="/logo.jpeg"
+            alt="Divine Netcare"
+            width={150}
+            height={40}
+            className="h-9 w-auto object-contain"
+            priority
+          />
         </div>
         <button
           onClick={toggleSidebar}

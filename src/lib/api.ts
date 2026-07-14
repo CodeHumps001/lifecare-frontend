@@ -38,14 +38,22 @@ class ApiError extends Error {
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getAuthToken();
+  const isFormData = options.body instanceof FormData;
+
+  // Build the headers dynamically
+  const headers: Record<string, string> = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers as Record<string, string>),
+  };
+
+  // Only set application/json if we are NOT sending FormData
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
 
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
+    headers,
   });
 
   // 401 anywhere in the admin panel means the session died — bounce to login
@@ -68,23 +76,34 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return (body?.data ?? body) as T;
 }
 
+// Helper to determine whether to stringify or keep raw body (like FormData)
+const serializeBody = (data?: unknown): BodyInit | undefined => {
+  if (data === undefined || data === null) return undefined;
+  if (data instanceof FormData) return data; // Keep FormData intact
+  return JSON.stringify(data); // Safely stringify JSON payloads
+};
+
 const get = <T>(path: string) =>
   request<T>(path, { method: "GET", cache: "no-store" });
+
 const post = <T>(path: string, data?: unknown) =>
   request<T>(path, {
     method: "POST",
-    body: data ? JSON.stringify(data) : undefined,
+    body: serializeBody(data),
   });
+
 const put = <T>(path: string, data?: unknown) =>
   request<T>(path, {
     method: "PUT",
-    body: data ? JSON.stringify(data) : undefined,
+    body: serializeBody(data),
   });
+
 const patch = <T>(path: string, data?: unknown) =>
   request<T>(path, {
     method: "PATCH",
-    body: data ? JSON.stringify(data) : undefined,
+    body: serializeBody(data),
   });
+
 const del = <T>(path: string) => request<T>(path, { method: "DELETE" });
 
 // ─── Auth ────────────────────────────────────────────────────────────
@@ -115,7 +134,6 @@ export interface CreateStaffPayload {
 export const authApi = {
   login: (email: string, password: string) =>
     post<LoginResponse>("/auth/login", { email, password }),
-  // admin-only: creates the staff account AND triggers a welcome email with their login credentials
   createStaff: (payload: CreateStaffPayload) =>
     post<{ id: string }>("/auth/register", payload),
 };
@@ -181,7 +199,6 @@ export const shiftsApi = {
   byDepartment: (departmentId: string) =>
     get<Shift[]>(`/shifts/department/${departmentId}`),
   swapRequests: {
-    // requires the /shifts/swap-requests/:departmentId backend patch — see backend-additions/README.md
     byDepartment: (departmentId: string) =>
       get<
         {
@@ -210,14 +227,12 @@ export const leaveApi = {
 // ─── Attendance ──────────────────────────────────────────────────────
 
 export const attendanceApi = {
-  // 1. Added optional dateString parameter
   byDepartment: (departmentId: string, dateString?: string) => {
     const query = dateString ? `?date=${dateString}` : "";
     return get<AttendanceRecord[]>(
       `/attendance/department/${departmentId}${query}`,
     );
   },
-
   manualOverride: (id: string, status: AttendanceStatus) =>
     patch<AttendanceRecord>(`/attendance/${id}/manual`, { status }),
 };
@@ -253,7 +268,6 @@ export const appointmentsApi = {
 
 export const reviewsApi = {
   listApproved: () => get<Review[]>("/reviews"),
-  // requires the /reviews/all backend patch — see backend-additions/README.md
   listAll: () => get<Review[]>("/reviews/all"),
   updateStatus: (id: string, status: ReviewStatus) =>
     patch<Review>(`/reviews/${id}`, { status }),
@@ -292,14 +306,13 @@ export interface PostPayload {
 
 export const postsApi = {
   list: () => get<Post[]>("/posts"),
+  listAdmin: () => get<Post[]>("/posts/admin"), // Add this route
   get: (id: string) => get<Post>(`/posts/${id}`),
-  create: (payload: PostPayload) => post<Post>("/posts", payload),
-  update: (id: string, payload: Pick<PostPayload, "title" | "content">) =>
-    put<Post>(`/posts/${id}`, payload),
+  create: (payload: FormData) => post<Post>("/posts", payload),
+  update: (id: string, payload: FormData) => put<Post>(`/posts/${id}`, payload),
   remove: (id: string) => del<void>(`/posts/${id}`),
   togglePublish: (id: string) => patch<Post>(`/posts/${id}/publish`, {}),
 };
-
 // ─── Hospital Settings ───────────────────────────────────────────────
 
 export interface HospitalSettingsPayload {

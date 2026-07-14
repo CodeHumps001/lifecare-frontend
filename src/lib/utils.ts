@@ -5,13 +5,31 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatDate(date: string | Date, opts?: Intl.DateTimeFormatOptions) {
+// Safely formats dates and avoids crashing on undefined/null/invalid values
+export function formatDate(
+  date: string | Date | null | undefined,
+  opts?: Intl.DateTimeFormatOptions,
+) {
+  if (!date) return "N/A";
   const d = typeof date === "string" ? new Date(date) : date;
-  return d.toLocaleDateString("en-GB", opts ?? { day: "2-digit", month: "short", year: "numeric" });
+
+  // Check if date object is invalid
+  if (isNaN(d.getTime())) return "N/A";
+
+  return d.toLocaleDateString(
+    "en-GB",
+    opts ?? { day: "2-digit", month: "short", year: "numeric" },
+  );
 }
 
-export function formatDateTime(date: string | Date) {
+// Safely formats date-times and avoids crashing on undefined/null/invalid values
+export function formatDateTime(date: string | Date | null | undefined) {
+  if (!date) return "N/A";
   const d = typeof date === "string" ? new Date(date) : date;
+
+  // Check if date object is invalid
+  if (isNaN(d.getTime())) return "N/A";
+
   return d.toLocaleString("en-GB", {
     day: "2-digit",
     month: "short",
