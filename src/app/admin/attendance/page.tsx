@@ -12,6 +12,8 @@ import {
   AlertTriangle,
   XCircle,
   Sparkles,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { format, isValid, isWithinInterval, subDays } from "date-fns";
 import { PageHeader } from "@/components/shared/page-header";
@@ -51,6 +53,7 @@ import type {
 import { cn } from "@/lib/utils";
 
 const STATUS_OPTIONS: AttendanceStatus[] = ["PRESENT", "LATE", "ABSENT"];
+const ITEMS_PER_PAGE = 5;
 
 export default function AttendancePage() {
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -63,6 +66,9 @@ export default function AttendancePage() {
     subDays(new Date(), 7),
   );
   const [endDate, setEndDate] = useState<Date | undefined>(new Date());
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
 
   const formatTimeSafe = (
     dateStr: string | Date | undefined | null,
@@ -108,6 +114,21 @@ export default function AttendancePage() {
     });
   })();
 
+  // Sort and Paginate Data
+  const sortedRecords = [...displayedRecords].sort((a, b) => {
+    const dateA = new Date(a.clockIn || a.createdAt || 0).getTime();
+    const dateB = new Date(b.clockIn || b.createdAt || 0).getTime();
+    return dateB - dateA;
+  });
+
+  const totalPages = Math.ceil(sortedRecords.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedRecords = sortedRecords.slice(
+    startIndex,
+    startIndex + ITEMS_PER_PAGE,
+  );
+
+  // Dynamic Metrics Engine
   const metrics = (() => {
     const total = displayedRecords.length;
     if (total === 0)
@@ -122,6 +143,11 @@ export default function AttendancePage() {
 
     return { total, present, late, absent, rate };
   })();
+
+  // Reset page position to 1 when filters or dataset changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [departmentId, startDate, endDate, records]);
 
   useEffect(() => {
     departmentsApi
@@ -345,7 +371,6 @@ export default function AttendancePage() {
           </p>
         </div>
 
-        {/* Added min-w-0 to all child columns in this grid to prevent overflow expansion */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
           {/* Department Selection */}
           <div className="md:col-span-3 min-w-0">
@@ -356,7 +381,6 @@ export default function AttendancePage() {
               value={departmentId}
               onValueChange={(v) => setDepartmentId(v ?? "")}
             >
-              {/* Force text truncation inside the SelectTrigger container */}
               <SelectTrigger className="w-full bg-slate-50/30 hover:bg-slate-50/80 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 rounded-xl transition-all duration-200 focus:ring-1 focus:ring-slate-400 dark:focus:ring-slate-700 min-w-0 overflow-hidden [&>span]:line-clamp-1">
                 <SelectValue placeholder="Select department" />
               </SelectTrigger>
@@ -497,7 +521,7 @@ export default function AttendancePage() {
                 />
               ))}
             </div>
-          ) : displayedRecords.length === 0 ? (
+          ) : paginatedRecords.length === 0 ? (
             <div className="py-16 px-6">
               <EmptyState
                 icon={Clock4}
@@ -510,42 +534,33 @@ export default function AttendancePage() {
               />
             </div>
           ) : (
-            <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
-              <Table>
-                <TableHeader className="bg-slate-50/40 dark:bg-slate-950/40 border-b border-slate-100 dark:border-slate-800">
-                  <TableRow className="hover:bg-transparent border-slate-100 dark:border-slate-800">
-                    <TableHead className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest py-4 px-6">
-                      Staff Associate
-                    </TableHead>
-                    <TableHead className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest py-4">
-                      Shift Classification
-                    </TableHead>
-                    <TableHead className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest py-4">
-                      Clock In Entry
-                    </TableHead>
-                    <TableHead className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest py-4">
-                      Clock Out Exit
-                    </TableHead>
-                    <TableHead className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest py-4">
-                      Verified Status
-                    </TableHead>
-                    <TableHead className="text-right text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest py-4 px-6">
-                      Administrative Action
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {displayedRecords
-                    .sort((a, b) => {
-                      const dateA = new Date(
-                        a.clockIn || a.createdAt || 0,
-                      ).getTime();
-                      const dateB = new Date(
-                        b.clockIn || b.createdAt || 0,
-                      ).getTime();
-                      return dateB - dateA;
-                    })
-                    .map((r) => (
+            <>
+              <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+                <Table>
+                  <TableHeader className="bg-slate-50/40 dark:bg-slate-950/40 border-b border-slate-100 dark:border-slate-800">
+                    <TableRow className="hover:bg-transparent border-slate-100 dark:border-slate-800">
+                      <TableHead className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest py-4 px-6">
+                        Staff Associate
+                      </TableHead>
+                      <TableHead className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest py-4">
+                        Shift Classification
+                      </TableHead>
+                      <TableHead className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest py-4">
+                        Clock In Entry
+                      </TableHead>
+                      <TableHead className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest py-4">
+                        Clock Out Exit
+                      </TableHead>
+                      <TableHead className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest py-4">
+                        Verified Status
+                      </TableHead>
+                      <TableHead className="text-right text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-widest py-4 px-6">
+                        Administrative Action
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedRecords.map((r) => (
                       <TableRow
                         key={r.id}
                         className="group border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/[0.3] dark:hover:bg-slate-850/[0.2] transition-colors duration-150"
@@ -633,9 +648,71 @@ export default function AttendancePage() {
                         </TableCell>
                       </TableRow>
                     ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Premium Footer Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="px-6 py-4 flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80 bg-slate-50/[0.1] dark:bg-slate-950/[0.1]">
+                  <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+                    Showing{" "}
+                    <span className="font-semibold text-slate-700 dark:text-slate-300 font-mono">
+                      {startIndex + 1}
+                    </span>{" "}
+                    to{" "}
+                    <span className="font-semibold text-slate-700 dark:text-slate-300 font-mono">
+                      {Math.min(
+                        startIndex + ITEMS_PER_PAGE,
+                        sortedRecords.length,
+                      )}
+                    </span>{" "}
+                    of{" "}
+                    <span className="font-semibold text-slate-700 dark:text-slate-300 font-mono">
+                      {sortedRecords.length}
+                    </span>{" "}
+                    entries
+                  </p>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.max(prev - 1, 1))
+                      }
+                      disabled={currentPage === 1}
+                      className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-xl h-8 px-3 font-medium text-xs transition-all disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                      <ChevronLeft className="mr-1.5 h-3.5 w-3.5" />
+                      Previous
+                    </Button>
+
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-850 px-2.5 py-1 rounded-lg font-mono">
+                        {currentPage}
+                      </span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 px-1 font-mono">
+                        / {totalPages}
+                      </span>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                      }
+                      disabled={currentPage === totalPages}
+                      className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 rounded-xl h-8 px-3 font-medium text-xs transition-all disabled:opacity-40 disabled:pointer-events-none"
+                    >
+                      Next
+                      <ChevronRight className="ml-1.5 h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
