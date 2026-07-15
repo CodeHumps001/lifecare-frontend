@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   },
   description:
     "Divine Netcare Hospital provides premium 24/7 medical care, maternity, surgery, eye care, and laboratory diagnostics in Kronum-Abouhia, Kumasi. Your health is our divine calling.",
+
   keywords: [
     // Hospital & Location
     "Divine Netcare Hospital",
@@ -86,8 +87,18 @@ export const metadata: Metadata = {
     "NHIS accredited hospital Kumasi",
     "Quality healthcare in Ashanti Region",
   ],
+  category: "hospital",
+  classification: "Healthcare Provider",
+  creator: "Divine Netcare Hospital",
+  publisher: "Divine Netcare Hospital",
+  other: {
+    "geo.region": "GH-ASH",
+    "geo.placename": "Kumasi",
+    "geo.position": "6.7568058;-1.6515792",
+    ICBM: "6.7568058, -1.6515792",
+  },
   authors: [{ name: "Divine Netcare Hospital" }],
-  metadataBase: new URL("https://divinenetcarehospital.com"),
+  metadataBase: new URL("https://divinenetcarehospital.vercel.app"),
   alternates: {
     canonical: "/",
   },
@@ -125,6 +136,7 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/logo.jpeg", sizes: "180x180", type: "image/jpeg" }],
   },
+  assets: "/logo.jpeg",
   robots: {
     index: true,
     follow: true,
@@ -147,6 +159,10 @@ export default function RootLayout({
   return (
     <html lang="en" className={cn("font-sans", inter.variable)}>
       <head>
+        <meta
+          name="google-site-verification"
+          content="YOUR_VERIFICATION_CODE"
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
