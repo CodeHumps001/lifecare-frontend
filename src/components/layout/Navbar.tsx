@@ -14,7 +14,7 @@ const navLinks = [
       { href: "/services#maternity", label: "Maternity" },
       { href: "/services#laboratory", label: "Laboratory" },
       { href: "/services#surgery", label: "Surgery" },
-      { href: "/services#eye-clinic", label: "Eye Clinic" },
+      { href: "/services#eye-clinic", label: "E - N - T" },
       { href: "/services#emergency", label: "Emergency" },
     ],
   },

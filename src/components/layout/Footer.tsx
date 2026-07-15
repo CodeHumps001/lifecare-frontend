@@ -16,7 +16,7 @@ const services = [
   "Maternity & Delivery",
   "Laboratory Tests",
   "Surgical Services",
-  "Eye Clinic",
+  "E - N - T",
   "Emergency Care",
   "Scan & Imaging",
   "OPD Services",

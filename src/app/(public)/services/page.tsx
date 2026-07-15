@@ -95,23 +95,23 @@ const services = [
     color: "from-teal-600 to-emerald-700",
   },
   {
-    id: "eye-clinic",
-    title: "Eye Clinic",
-    subtitle: "Specialist Eye Care",
+    id: "ent-clinic",
+    title: "Ear, Nose & Throat (ENT) Clinic",
+    subtitle: "Specialist Otolaryngology Services",
     description:
-      "Our dedicated eye clinic provides comprehensive optical and ophthalmological services. Whether you need a routine vision test or specialist treatment, our eye care team is equipped to help.",
+      "Our specialist ENT clinic offers comprehensive diagnostics and advanced treatments for a wide range of ear, nose, throat, head, and neck conditions. From micro-suction ear clearance to sinus therapies, our clinical team delivers premium care.",
     image:
-      "https://images.unsplash.com/photo-1559757175-0eb30cd8c063?w=700&h=450&fit=crop",
+      "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=700&h=450&fit=crop",
     features: [
-      "Comprehensive eye examinations",
-      "Vision testing and prescription",
-      "Glaucoma screening",
-      "Cataract assessment",
-      "Diabetic eye screening",
-      "Referrals to ophthalmologists",
+      "Comprehensive hearing assessments & audiometry tests",
+      "Sinus, allergy, and nasal congestion treatments",
+      "Throat, voice, and swallowing evaluation",
+      "Tonsillitis and adenoid infection management",
+      "Micro-suction ear wax removal and tinnitus advice",
+      "Direct referrals to head and neck otolaryngologists",
     ],
     hours: "Monday – Friday: 8:00AM – 5:00PM",
-    color: "from-emerald-500 to-amber-600",
+    color: "from-blue-600 to-cyan-500",
   },
   {
     id: "emergency",
@@ -257,7 +257,7 @@ export default function ServicesPage() {
                     Book Appointment <ArrowRight className="w-4 h-4" />
                   </Link>
                   <a
-                    href="tel:+233558484862"
+                    href="tel:+233501812304"
                     className="inline-flex items-center justify-center gap-2 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm px-6 py-3.5 rounded-xl border border-slate-200 shadow-sm transition-all w-full sm:w-auto text-center"
                   >
                     <Phone className="w-4 h-4 text-emerald-600" /> Call Unit
@@ -294,7 +294,7 @@ export default function ServicesPage() {
               className="inline-flex items-center justify-center gap-3 bg-white text-red-700 hover:bg-rose-50 font-extrabold px-8 py-4 rounded-xl transition-all text-base sm:text-lg shadow-xl shadow-red-950/20 w-full sm:w-auto text-center transform hover:-translate-y-0.5"
             >
               <Phone className="w-5 h-5 animate-bounce" />
-              Call Emergency: +233 55 848 4862
+              Call Emergency: +233 50 181 2304
             </a>
           </div>
         </div>
