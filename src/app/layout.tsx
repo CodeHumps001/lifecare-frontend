@@ -17,14 +17,74 @@ export const metadata: Metadata = {
   description:
     "Divine Netcare Hospital provides premium 24/7 medical care, maternity, surgery, eye care, and laboratory diagnostics in Kronum-Abouhia, Kumasi. Your health is our divine calling.",
   keywords: [
+    // Hospital & Location
     "Divine Netcare Hospital",
     "Hospital in Kumasi",
     "Best hospital in Ashanti Region",
-    "Maternity delivery Kumasi",
-    "24 hour emergency healthcare Ghana",
     "Kronum Abouhia medical center",
+    "Divine Netcare Hospital Kumasi",
+    "Medical center in Kronum",
+    "Healthcare in Ashanti Region",
+    "Top hospital near me Kumasi",
+    "Private hospital Kumasi",
+
+    // Emergency & General Services
+    "24 hour emergency healthcare Ghana",
+    "24 hour medical care Kumasi",
+    "Emergency room in Kumasi",
+    "Urgent care Ashanti Region",
+    "General medical consultations Kumasi",
+    "Inpatient and outpatient services Kumasi",
+    "Health screening Kumasi",
+    "Preventive healthcare Ghana",
+
+    // Maternity & Women's Health
+    "Maternity delivery Kumasi",
+    "Antenatal care Kumasi",
+    "Safe delivery hospital Ghana",
+    "Gynecology services Kumasi",
+    "Women's health clinic Kumasi",
+    "Pregnancy care hospital Ashanti Region",
+    "Childbirth hospital near me",
+
+    // Specialist Clinics
     "Eye clinic Kumasi",
+    "ENT clinic Kumasi",
+    "Ear nose and throat specialist Kumasi",
+    "Ear hospital in Ghana",
+    "Nose and sinus treatment Kumasi",
+    "Throat infection treatment Ashanti Region",
+    "Audiologist Kumasi",
+    "Eye doctor in Kumasi",
+    "Ophthalmology services Ghana",
+
+    // Diagnostic & Lab Services
     "Laboratory services Kumasi",
+    "X-ray and ultrasound Kumasi",
+    "Blood test lab Kumasi",
+    "Medical diagnostics Ghana",
+    "Full body checkup Kumasi",
+    "Pharmacy near me Kumasi",
+
+    // Surgery & Treatment
+    "Minor surgery Kumasi",
+    "Surgical procedures Ashanti Region",
+    "Ear surgery Ghana",
+    "Tonsillectomy Kumasi",
+    "Sinus surgery Ashanti Region",
+
+    // Child & Family Health
+    "Children's health clinic Kumasi",
+    "Pediatric care Kumasi",
+    "Family doctor Kumasi",
+    "Vaccination center Kumasi",
+    "Child immunization Ghana",
+
+    // Affordability & Accessibility
+    "Affordable hospital in Kumasi",
+    "Health insurance accepted hospital Ghana",
+    "NHIS accredited hospital Kumasi",
+    "Quality healthcare in Ashanti Region",
   ],
   authors: [{ name: "Divine Netcare Hospital" }],
   metadataBase: new URL("https://divinenetcarehospital.com"),
@@ -35,7 +95,7 @@ export const metadata: Metadata = {
     title: "Divine Netcare Hospital | Quality Healthcare in Kumasi",
     description:
       "Premium 24/7 emergency medical care, maternity services, eye diagnostics, and surgery located in Kronum-Abouhia, Kumasi.",
-    url: "https://divinenetcarehospital.com",
+    url: "https://divinenetcarehospital.vercel.app",
     siteName: "Divine Netcare Hospital",
     locale: "en_GH",
     type: "website",
