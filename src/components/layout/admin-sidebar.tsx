@@ -17,6 +17,7 @@ import {
   TrendingUp,
   LogOut,
   X,
+  ChevronLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore, useAuthStore } from "@/lib/store";
@@ -41,6 +42,7 @@ const navItems: NavItem[] = [
   { title: "Announcements", href: "/admin/announcements", icon: Bell },
   { title: "Leave", href: "/admin/leave", icon: Settings },
   { title: "Settings", href: "/admin/settings", icon: Settings },
+  { title: "Website", href: "/", icon: ChevronLeft },
 ];
 
 export function AdminSidebar() {

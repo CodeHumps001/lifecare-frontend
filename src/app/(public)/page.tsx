@@ -21,6 +21,7 @@ import {
   MapPin,
   CheckCircle,
   Quote,
+  Ear,
 } from "lucide-react";
 
 const stats = [
@@ -64,12 +65,12 @@ const services = [
     href: "/services#surgery",
   },
   {
-    icon: Eye,
-    title: "Eye Clinic",
+    icon: Ear,
+    title: "ENT Clinic",
     description:
-      "Comprehensive eye care services from routine checkups to complex treatments.",
-    color: "bg-amber-50 text-amber-700 border-amber-100",
-    href: "/services#eye-clinic",
+      "Specialized care for ear, nose, and throat conditions from hearing loss to sinus treatments.",
+    color: "bg-cyan-50 text-cyan-700 border-cyan-100",
+    href: "/services#ent-clinic",
   },
   {
     icon: Syringe,
