@@ -19,11 +19,12 @@ import {
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<{
     name: string;
     email: string;
@@ -33,9 +34,28 @@ export default function ContactPage() {
   }>();
 
   const onSubmit = async (data: any) => {
-    console.log("Contact submission payload logged:", data);
-    setSubmitted(true);
-    reset();
+    setSubmitError(null);
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/contact`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data),
+        },
+      );
+
+      const result = await res.json();
+
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || "Failed to send message");
+      }
+
+      setSubmitted(true);
+      reset();
+    } catch (err: any) {
+      setSubmitError(err.message || "Something went wrong. Please try again.");
+    }
   };
 
   const contactInfo = [
@@ -289,11 +309,19 @@ export default function ContactPage() {
                   )}
                 </div>
 
+                {submitError && (
+                  <div className="bg-red-50 border border-red-100 text-red-700 text-xs font-semibold rounded-xl px-4 py-3 flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0" /> {submitError}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  className="w-full bg-slate-950 text-white hover:bg-slate-800 font-bold text-xs tracking-wider uppercase py-4 rounded-xl shadow-sm transition-colors flex items-center gap-2 justify-center"
+                  disabled={isSubmitting}
+                  className="w-full bg-slate-950 text-white hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed font-bold text-xs tracking-wider uppercase py-4 rounded-xl shadow-sm transition-colors flex items-center gap-2 justify-center"
                 >
-                  <Send className="w-3.5 h-3.5" /> Dispatch Message Data
+                  <Send className="w-3.5 h-3.5" />{" "}
+                  {isSubmitting ? "Sending..." : "Dispatch Message Data"}
                 </button>
               </form>
             )}
