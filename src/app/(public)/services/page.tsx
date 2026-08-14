@@ -139,21 +139,22 @@ export default function ServicesPage() {
   return (
     <div className="bg-slate-50 text-slate-800 antialiased selection:bg-emerald-500 selection:text-white">
       {/* ── HERO SECTION ───────────────────────────────────── */}
-      <section className="relative min-h-[60vh] flex items-center bg-slate-950 py-20 px-4 overflow-hidden">
-        {/* Crisp Background Layer with Reduced Green Dominance */}
+      <section className="relative min-h-[60vh] flex items-center py-20 px-4 overflow-hidden">
+        {/* Full-strength background photograph */}
         <div className="absolute inset-0 z-0">
           <Image
-            src="https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=1600&h=600&fit=crop"
+            src="https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=1600&h=900&fit=crop"
             alt="Divine Netcare Medical Infrastructure"
             fill
-            className="object-cover opacity-35 filter brightness-95"
+            className="object-cover"
             priority
           />
-          {/* Linear Mask to retain dark, ultra-premium contrast over text */}
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-emerald-950/20" />
+          {/* Gradient scrim for text legibility, matching the homepage hero treatment */}
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/95 via-slate-950/80 to-slate-950/50" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/40" />
         </div>
 
-        {/* Decorative subtle vector ambient blurs */}
+        {/* Decorative ambient blur */}
         <div className="absolute -top-12 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
 
         <div className="relative z-10 max-w-5xl mx-auto text-center space-y-6">

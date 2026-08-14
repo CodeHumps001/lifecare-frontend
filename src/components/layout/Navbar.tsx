@@ -72,7 +72,7 @@ export default function Navbar() {
 
       {/* ── CORE NAVIGATION HEADER MODULE ───────────────────────── */}
       <nav
-        className={`sticky top-0 z-50 transition-all duration-300 ${
+        className={`md:sticky md:top-0 z-50 transition-all duration-300 ${
           isScrolled
             ? "bg-white/95 backdrop-blur-md shadow-md border-b border-slate-200/60 py-2.5"
             : "bg-white border-b border-slate-100 py-4"
@@ -87,7 +87,7 @@ export default function Navbar() {
             <Image
               src="/logo.jpeg"
               alt="Divine Netcare Hospital"
-              width={160}
+              width={100}
               height={60}
               className="h-300 sm:h-11 w-auto object-contain"
               priority
