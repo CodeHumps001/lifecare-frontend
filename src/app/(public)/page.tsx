@@ -692,7 +692,7 @@ export default function HomePage() {
               Care That Treats You Like Family
             </h2>
             <p className="text-slate-600 text-sm sm:text-base leading-relaxed max-w-xl mx-auto lg:mx-0">
-              We know a hospital visit can be stressful. That's why we pair
+              We know a hospital visit can be stressful. That&apos;s why we pair
               skilled, experienced clinicians with genuine warmth — so you
               always feel heard, and never just like a number.
             </p>
@@ -871,7 +871,7 @@ export default function HomePage() {
               Located in the Heart of Kumasi
             </h2>
             <p className="text-slate-500 text-sm leading-relaxed max-w-sm mx-auto lg:mx-0">
-              We're at Kronum-Abouhia, Kumasi in the Ashanti Region — easy
+              We&apos;re at Kronum-Abouhia, Kumasi in the Ashanti Region — easy
               street access with dedicated compound parking.
             </p>
 
